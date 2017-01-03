@@ -1,0 +1,488 @@
+/* File:      flrio.flr
+**
+** Author(s): Michael Kifer
+**
+** Contact:   flora-users@lists.sourceforge.net
+**
+** Copyright (C) by
+**      The Research Foundation of the State University of New York, 1999-2013.
+**
+** Licensed under the Apache License, Version 2.0 (the "License");
+** you may not use this file except in compliance with the License.
+** You may obtain a copy of the License at
+**
+**      http://www.apache.org/licenses/LICENSE-2.0
+**
+** Unless required by applicable law or agreed to in writing, software
+** distributed under the License is distributed on an "AS IS" BASIS,
+** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+** See the License for the specific language governing permissions and
+** limitations under the License.
+**
+**
+*/
+
+:- nontabled_module.
+
+
+#include "flora_terms.flh"
+#include "flora_exceptions.flh"
+
+:- symbol_context{
+            cwd/0, cwd/1
+   }.
+
+// The purpose of this library is to provide optimal conversion from
+// HiLog to Prolog and back before passing the arguments to the I/O predicates.
+// In addition, it passes the result through flora_write_oid/1 in order 
+// to ensure that all the FLORA module info and encoding is stripped.
+//
+// This all is used for user-level output. For file I/O one should use
+// @\prolog instead of @\io, i.e., use Prolog I/O primitives directly.
+
+:- suppress_rule_signatures.
+:- symbol_context{
+        fmt_write(?,?)@?, fmt_write(?,?,?)@?,
+        fmt_write(?,?,?,?)@?, fmt_write(?,?,?,?,?)@?,
+        fmt_write/2, fmt_write/3,
+	fmt_write_string/3, fmt_write_string/4, fmt_write_string/5,
+	fmt_read(?,?,?),
+        write_canonical(?)@?,
+        read_canonical(?),
+        readline(?,?)@?,
+        writeln(?)@?, writeln(?,?)@?, writeln(?,?,?)@?,
+        write(?)@?, write(?,?)@?, write(?,?,?)@?, write(?,?,?,?)@?,
+        writeln/1, writeln/2, writeln/3,
+        write/1, write/2, write/3,
+        read(?),
+        readable(?),
+        read(?)@?,
+	nl@?, nl(?)@?
+    }.
+
+/**************************
+**   I/O port based ops
+**************************/
+
+:- export{
+         ?[open(?,?)],
+	 ?[close],
+	 ?[read(?)],
+	 ?[write(?)],   ?[write(?,?)],
+	 ?[writeln(?)], ?[writeln(?,?)],
+	 //stdread(?),
+	 //stdwrite(?),
+	 fmt_write(?,?),    fmt_write(?,?,?),
+	 ?[fmt_write(?,?)], ?[fmt_write(?,?,?)],
+	 fmt_write_string(?,?,?), fmt_write_string(?,?,?,?),
+	 fmt_read(?,?,?),
+	 ?[fmt_read(?,?,?)],
+	 ?[write_canonical(?)],
+	 write_canonical(?),
+	 read_canonical(?),
+	 ?[read_canonical(?)],
+	 ?[readline(?,?)],
+	 readline(?,?),
+	 read(?),
+	 write(?), write(?,?), write(?,?,?),
+	 writeln(?), writeln(?,?), writeln(?,?,?),
+	 nl,
+	 nl(?),
+	 ?[see],
+	 see(?),
+	 seen,
+	 ?[seeing],
+	 seeing(?),
+	 ?[tell],
+	 tell(?),
+	 told,
+	 ?[telling],
+	 telling(?),
+	 // file ops
+	 ?[exists(?)],
+	 ?[readable(?)],
+	 ?[writable(?)],
+	 ?[executable(?)],
+	 ?[modtime(?,?)],
+	 ?[mkdir(?)],
+	 ?[rmdir(?)],
+	 ?[chdir(?)],
+	 ?[cwd(?)],
+	 ?[cwd->?],
+	 ?[link(?,?)],
+	 ?[unlink(?)],
+	 ?[remove(?)],
+	 ?[tmpfilename(?)],
+	 ?[isabsolute(?)],
+	 ?[rename(?,?)],
+	 ?[basename(?,?)],
+	 ?[extension(?,?)],
+	 ?[expand(?,?)],
+	 ?[newerthan(?,?)],
+	 ?[dirname(?,?)],
+	 ?[copy(?,?)]}.
+
+check_stream(?StreamOrAlias) :-
+	(check_stream_or_alias(?StreamOrAlias,?_Predicate,?_Arg,?Stream),
+	 is_valid_stream(?Stream,?_Mode))@\prolog(file_io).
+
+?Filename[open(?Mode,?Stream)] :-
+	memberchk(?Mode,[read,write,append,write_binary,append_binary])@\prolog(basics),
+	!,
+	// ?Filename can be atom(...). Needs to be prologized
+	p2h{?FilenameP,?Filename},
+	isground{?FilenameP},
+	open(?FilenameP,?Mode,?Stream)@\prolog.
+?Filename[open(?Mode,?)] :-
+	abort(['In \'', ?Filename, '\'[open(', ?Mode, ',...)]@\\sys: invalid file opening mode. Valid modes are: read, write, append, write_binary, append_binary'])@\sys.
+
+
+?Stream[close] :-
+	//isinteger{?Stream},
+	check_stream(?Stream),
+	!,
+	close(?Stream)@\prolog.
+?Stream[close] :-
+	abort(['In ?Stream[close]@\\sys: invalid I/O stream=', ?Stream, '. This stream has probably been closed by you or never opened.'])@\sys.
+
+/*
+stdread(?HResult) :-
+	read(STDIN, ?PResult)@\prolog, p2h{?PResult,?HResult}.
+stdwrite(?Term) :-
+	flora_write_oid(STDOUT,?Term)@\prolog(flrdecode).
+*/
+
+
+// Use arg(obj, obj, obj) to supply multiple arguments
+fmt_write(?FileHandle,?Format,?O,?Options,?M) :-
+	isinteger{?FileHandle},
+	florify_arguments(?O,?FO,?Options,?M),
+	fmt_write(?FileHandle,?Format,?FO)@\prolog.
+
+fmt_write(?FileHandle,?Format,?O,?Options) :-
+        caller{?M},
+        fmt_write(?FileHandle,?Format,?O,?Options,?M).
+fmt_write(?Format,?O,?Options) :-
+        caller{?M},
+        telling(?FileHandle),
+        fmt_write(?FileHandle,?Format,?O,?Options,?M).
+fmt_write(?Format,?O) :-
+        caller{?M},
+        telling(?FileHandle),
+        fmt_write(?FileHandle,?Format,?O,[oid],?M).
+
+?FileHandle[fmt_write(?Format,?O)] :-
+        caller{?M},
+        fmt_write(?FileHandle,?Format,?O,[oid],?M).
+?FileHandle[fmt_write(?Format,?O,?Options)] :-
+        caller{?M},
+        fmt_write(?FileHandle,?Format,?O,?Options,?M).
+
+fmt_write_string(?String,?Format,?O) :-
+        caller{?M},
+        fmt_write_string(?String,?Format,?O,[oid],?M).
+fmt_write_string(?String,?Format,?O,?Options) :-
+        caller{?M},
+        fmt_write_string(?String,?Format,?O,?Options,?M).
+fmt_write_string(?String,?Format,?O,?Options,?M) :-
+	florify_arguments(?O,?FO,?Options,?M),
+	fmt_write_string(?String1,?Format,?FO)@\prolog,
+	?String = ?String1.
+
+fmt_read(?Format,?Result,?Status) :-
+	!,
+	fmt_read(?Format,?PResult,?Status1)@\prolog,
+	?Status = ?Status1,
+	p2h{?PResult,?Result}.
+?FileHandle[fmt_read(?Format,?Result,?Status)] :-
+	isinteger{?FileHandle},
+	fmt_read(?FileHandle,?Format,?PResult,?Status1)@\prolog,
+	?Status = ?Status1,
+	p2h{?PResult,?Result}.
+
+?FileHandle[write_canonical(?HTerm)] :-
+	isinteger{?FileHandle},
+	p2h{?PTerm,?HTerm},
+	file_write_canonical(?FileHandle,?PTerm)@\prolog(xsb_writ).
+write_canonical(?HTerm) :-
+	p2h{?PTerm,?HTerm},
+        write_canonical(?PTerm)@\prolog.
+
+read_canonical(?HTerm) :-
+	read_canonical(?PTerm)@\prolog, p2h{?PTerm,?HTerm}. 
+?FileHandle[read_canonical(?HTerm)] :-
+	isinteger{?FileHandle},
+	file_read_canonical(?FileHandle,?PTerm,?_)@\prolog(machine),
+	p2h{?PTerm,?HTerm}. 
+?FileHandle[readline(atom,?String)] :-
+	isinteger{?FileHandle},
+	!,
+	file_read_line_atom(?FileHandle,?String)@\prolog(file_io).
+?FileHandle[readline(charlist,?String)] :-
+	isinteger{?FileHandle},
+	!,
+	file_read_line_list(?FileHandle,?String)@\prolog(file_io).
+?FileHandle[readline(?Request,?_)] :- 
+	isinteger{?FileHandle},
+	abort(['Invalid readline format, ', ?Request])@\sys.
+readline(atom,?String) :-
+	!,
+	file_read_line_atom(?String1)@\prolog(file_io),
+	?String = ?String1.
+readline(charlist,?String) :-
+	!,
+	file_read_line_list(?String1)@\prolog(file_io),
+	?String = ?String1.
+readline(?Request,?_) :- 
+	abort(['invalid readline format, ', ?Request])@\sys.
+
+
+/***********************
+**  Stream-based I/O
+***********************/
+
+// we don't want these to quote atoms
+write(?O) :-
+        caller{?M},
+        telling(?Stream),
+        write(?Stream,?O,[oid],?M).
+
+write(?O,?Options) :-
+        caller{?M},
+        telling(?Stream),
+        write(?Stream,?O,?Options,?M).
+
+write(?Stream,?O,?_Options) :-
+        caller{?M},
+        write(?Stream,?O,?_Options,?M).
+
+write(?Stream,?O,?_Options,?_M) :-
+	atomic(?O)@\prolog,
+	\+ isiri{?O},
+	\+ isstring{?O},
+	\+ isskolem{?O},
+	!,
+	write(?Stream,?O)@\prolog.
+write(?Stream,?O,?Options,?M) :-
+	!,
+	change_module_if_needed(?O,?OM,?M),
+        (memberchk(oid,?Options)@\prolog(basics) -->>
+            flora_write_oid(?Stream,?OM)@\prolog(flrdecode)
+        ; flora_write_goal_mainless(?Stream,?OM) @\prolog(flrdecode)
+        ).
+
+writeln(?O) :-
+        caller{?M},
+        telling(?Stream),
+        write(?Stream,?O,[oid],?M),
+        nl(?Stream).
+writeln(?O,?Options) :-
+        caller{?M},
+        telling(?Stream),
+        write(?Stream,?O,?Options,?M),
+	nl(?Stream).
+writeln(?Stream,?O,?Options) :-
+        caller{?M},
+        write(?Stream,?O,?Options,?M),
+	nl(?Stream).
+
+nl :- nl@\prolog.
+nl(?IOstream) :- nl(?IOstream)@\prolog.
+
+?IOstream[write(?O)] :-
+        caller{?M},
+        write(?IOstream,?O,[oid],?M).
+?IOstream[write(?O,?Options)] :-
+        caller{?M},
+        write(?IOstream,?O,?Options,?M).
+
+?IOstream[writeln(?O)] :-
+        caller{?M},
+        write(?IOstream,?O,[oid],?M),
+        nl(?IOstream).
+?IOstream[writeln(?O,?Options)] :-
+        caller{?M},
+        write(?IOstream,?O,?Options,?M),
+        nl(?IOstream).
+
+read(?Result) :- !, read(?PResult)@\prolog, p2h{?PResult,?Result}.
+?IOstream[read(?Result)] :-
+	isinteger{?IOstream},
+	read(?IOstream,?PResult)@\prolog, p2h{?PResult,?Result}.
+
+?Filename[see] :-
+	isground{?Filename},
+ 	see(?Filename)@\prolog.
+see(?Filename) :-
+	isground{?Filename},
+  	see(?Filename)@\prolog.
+seen :- seen@\prolog.
+seeing(?Stream) :-
+	(isinteger{?Stream} ; isvar{?Stream}),
+	!,
+	seeing(?Stream)@\prolog.
+?Stream[seeing] :-
+	(isinteger{?Stream} ; isvar{?Stream}),
+	!,
+	seeing(?Stream)@\prolog.
+
+?Filename[tell] :-
+	isground{?Filename},
+	tell(?Filename)@\prolog.
+tell(?Filename) :-
+	isground{?Filename},
+	tell(?Filename)@\prolog.
+told :- told@\prolog.
+telling(?Stream) :-
+	(isinteger{?Stream} ; isvar{?Stream}),
+	!,
+	telling(?Stream)@\prolog.
+?Stream[telling] :-
+	(isinteger{?Stream} ; isvar{?Stream}),
+	!,
+	telling(?Stream)@\prolog.
+
+
+
+// UTILITIES
+
+// This is used for fmt_write_* predicates. Takes a *prolog* term argument 
+// of the form 
+// arg(arg1,...,argn) and returns arg(arg1',..., argn'), where arg_i=arg_i'
+// if arg_i is not compound. Otherwise we apply flora_write_oid/1
+// This is needed in order make sure that arguments like f(a) are printed 
+// as f(a) and not WRAP_HILOG(f,a) or something like that.
+florify_arguments(?WrappedArgs,?OutTerm,?Options,?M) :-
+	?WrappedArgs =.. [hilog(?Fun) | ?Args],
+	!,
+	florify_arglist(?Args,?OutList,?Options,?M),
+	?OutTerm =.. [?Fun|?OutList].
+// single argument to fmt_write without the arg(...) envelope
+florify_arguments(?Arg,?OutTerm,?_Options,?_M) :-
+	(isiri{?Arg} ; isstring{?Arg} ; isskolem{?Arg}),
+	!,
+	flora_decode_oid_as_atom(?Arg,?OutTerm)@\prolog(flrdecode).
+florify_arguments(?_Arg,?_Arg,?_Options,?_M) :- \true.
+
+florify_arglist([],[],?,?) :- !.
+florify_arglist([?Arg|?Args], [?OutArg| ?OutArgs],?Options,?M) :-
+	(iscompound{?Arg} ; isiri{?Arg} ; isstring{?Arg} ; isskolem{?Arg}),
+	!,
+	change_module_if_needed(?Arg,?ArgM,?M),
+        (memberchk(oid,?Options)@\prolog(basics) -->>
+            flora_decode_oid_as_atom(?ArgM,?OutArg)@\prolog(flrdecode)
+        ; flora_decode_goal_as_mainless_atom(?ArgM,?OutArg) @\prolog(flrdecode)
+        ),
+	florify_arglist(?Args,?OutArgs,?Options,?M).
+florify_arglist([?Arg|?Args], [?OutArg|?OutArgs],?Options,?M) :-
+	isvar{?Arg},
+	!,
+	flora_decode_oid_as_atom(?Arg,?OutArg)@\prolog(flrdecode),
+	florify_arglist(?Args,?OutArgs,?Options,?M).
+florify_arglist([?_Arg|?Args], [?_Arg| ?OutArgs],?Options,?M) :-
+	florify_arglist(?Args,?OutArgs,?Options,?M).
+
+
+File[exists(?F)] :-
+	isatom{?F},
+	!,
+	flora_file_op(exists,?F)@\prolog(flrporting).
+File[readable(?F)] :-
+	isatom{?F},
+	!,
+	flora_file_op(readable,?F)@\prolog(flrporting).
+File[writable(?F)] :-
+	isatom{?F},
+	!,
+	flora_file_op(writable,?F)@\prolog(flrporting).
+File[executable(?F)] :-
+	isatom{?F},
+	!,
+	flora_file_op(executable,?F)@\prolog(flrporting).
+File[modtime(?F,?T)] :-
+	isatom{?F},
+	!,
+	flora_file_op(modtime,?F,?T)@\prolog(flrporting).
+File[mkdir(?F)] :-
+	isatom{?F},
+	!,
+	flora_file_op(mkdir,?F)@\prolog(flrporting).
+File[rmdir(?F)] :-
+	isatom{?F},
+	!,
+	flora_file_op(rmdir,?F)@\prolog(flrporting).
+File[chdir(?F)] :-
+	isatom{?F},
+	!,
+	flora_file_op(chdir,?F)@\prolog(flrporting).
+
+File[cwd->?F] :- File[cwd(?F)].
+File[cwd(?F)] :-
+	!,
+	flora_file_op(cwd,?F)@\prolog(flrporting).
+
+File[link(?F,?D)] :-
+	isatom{?F},
+	isatom{?D},
+	!,
+	flora_file_op(link,?F,?D)@\prolog(flrporting).
+File[unlink(?F)] :-
+	isatom{?F},
+	!,
+	flora_file_op(unlink,?F)@\prolog(flrporting).
+File[remove(?F)] :-
+	isatom{?F},
+	!,
+	flora_file_op(rm,?F)@\prolog(flrporting).
+File[tmpfilename(?F)] :-
+	isatom{?F},
+	!,
+	flora_file_op(tmpfilename,?F)@\prolog(flrporting).
+File[isabsolute(?F)] :-
+	isatom{?F},
+	!,
+	flora_file_op(isabsolute,?F)@\prolog(flrporting).
+File[rename(?F,?To)] :-
+	isatom{?F},
+	isatom{?To},
+	!,
+	flora_file_op(rename,?F,?To)@\prolog(flrporting).
+File[basename(?F,?Base)] :-
+	isatom{?F},
+	!,
+	flora_file_op(basename,?F,?Base1)@\prolog(flrporting),
+	?Base = ?Base1.
+File[extension(?F,?Ext)] :-
+	isatom{?F},
+	!,
+	flora_file_op(extension,?F,?Ext1)@\prolog(flrporting),
+	?Ext = ?Ext1.
+File[expand(?F,?Expanded)] :-
+	isatom{?F},
+	!,
+	flora_file_op(expand,?F,?Expanded1)@\prolog(flrporting),
+	?Expanded = ?Expanded1.
+File[newerthan(?F,?F2)] :-
+	isatom{?F},
+	isatom{?F2},
+	!,
+	flora_file_op(newerthan,?F,?F2)@\prolog(flrporting).
+File[dirname(?F,?Dir)] :-
+	isatom{?F},
+	!,
+	flora_file_op(dirname,?F,?Dir1)@\prolog(flrporting),
+	?Dir = ?Dir1.
+File[copy(?F,?To)] :-
+	isatom{?F},
+	isatom{?To},
+	!,
+	flora_file_op(copy,?F,?To)@\prolog(flrporting).
+File[?Op(?F1,?F2)] :-
+	?Op \in [newerthan,rename,link,copy],
+	!,
+	flora_abort([File,'[',?Op,'(',?F1,',',?F2,')]: ', 'both file arguments must be bound to atoms'],FLORA_ABORT_NOTRACE)@\prolog(flrporting).
+File[?Op] :-
+	flora_abort([File,'[(',?Op,')]: ', 'file argument must be bound to an atom'],FLORA_ABORT_NOTRACE)@\prolog(flrporting).
+
+
+#include "include/change_module.flr"

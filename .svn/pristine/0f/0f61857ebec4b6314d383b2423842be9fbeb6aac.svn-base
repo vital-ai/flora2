@@ -1,0 +1,129 @@
+/* File:      flrxml_aux.flr
+** Author(s): Rohan Shirwaikar
+**
+** Contact:   flora-users@lists.sourceforge.net
+**
+** Copyright (C) by
+**      The Research Foundation of the State University of New York, 1999-2013.
+**
+** Licensed under the Apache License, Version 2.0 (the "License");
+** you may not use this file except in compliance with the License.
+** You may obtain a copy of the License at
+**
+**      http://www.apache.org/licenses/LICENSE-2.0
+**
+** Unless required by applicable law or agreed to in writing, software
+** distributed under the License is distributed on an "AS IS" BASIS,
+** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+** See the License for the specific language governing permissions and
+** limitations under the License.
+**
+**
+*/
+
+:- nontabled_module.
+
+:- symbol_context{'$tag'/0, '$tag'/1}.
+
+:- suppress_rule_signatures.
+:- export{
+	parse_xpath_xml(?_,?_,?_,?_,?_),
+	parse_xpath_sgml(?_,?_,?_,?_,?_),
+	parse_xpath_html(?_,?_,?_,?_,?_),
+	parse_xpath_xhtml(?_,?_,?_,?_,?_),
+	load_xml_structure(?_, ?_, ?_),
+	load_sgml_structure(?_, ?_, ?_),
+	load_html_structure(?_, ?_, ?_),
+	load_xhtml_structure(?_, ?_, ?_),
+	flrnewoid(?_),
+	flrelement(?_,?_,?_,?_),
+	flrattribute(?_,?_,?_,?_),
+	flrattributefunc(?_,?_,?_,?_,?_)}.
+
+flrnewoid(?X) :- newoid{?X}.
+
+flrelement(?C, ?X, ?C1, ?M) :-
+	newoid{?C1}, 
+	\if isloaded{?M}  \then \true \else  newmodule{?M}, 
+	insert{?C[?X->{?C1}]@?M},
+	\if flora_get_counter('flrxml$debug$flag',7)@\plg(flrporting)
+	\then format('~w[~w->~w].  // @~w~n', [?C,?X,?C1,?M])@\plg(format),
+	!.
+
+flrattribute(?C, ?X, ?Y, ?M) :- 
+	\if isloaded{?M}  \then \true \else  newmodule{?M}, 
+	insert{?C[?X->?Y]@?M},
+	\if flora_get_counter('flrxml$debug$flag',7)@\plg(flrporting)
+	\then format('~w[~w->~w].  // @~w~n', [?C,?X,?Y,?M])@\plg(format),
+	!.
+flrattributefunc(?C, ?X, ?Y, ?Z, ?M):- 
+	\if isloaded{?M}  \then \true \else  newmodule{?M}, 
+	insert{?C[?X(?Y)->?Z]@?M},
+	\if flora_get_counter('flrxml$debug$flag',7)@\plg(flrporting)
+	\then format('~w[~w(~w)->~w].  // @~w~n', [?C,?X,?Y,?Z,?M])@\plg(format),
+	!.
+
+parse_xpath_xml(?X, ?Y, ?N, ?W, ?M) :-
+	parse_xpath(?X, ?Y, ?Z, ?N)@\prologall(xpath),
+	load_xml_structure(string(?Z), ?W, ?M).
+parse_xpath_sgml(?X, ?Y, ?N, ?W, ?M) :-
+	parse_xpath(?X, ?Y, ?Z, ?N)@\prologall(xpath),
+	load_sgml_structure(string(?Z), ?W, ?M).
+
+parse_xpath_html(?X, ?Y, ?N, ?W, ?M) :-
+	parse_xpath(?X, ?Y, ?Z, ?N)@\prologall(xpath),
+	load_html_structure(string(?Z), ?W, ?M).
+parse_xpath_xhtml(?X, ?Y, ?N, ?W, ?M) :-
+	parse_xpath(?X, ?Y, ?Z, ?N)@\prologall(xpath),
+	load_xhtml_structure(string(?Z), ?W, ?M).
+
+parse_xpath(?X, ?Y, ?N, ?O, ?W, ?M) :-
+	parse_xpath(?X, ?Y, ?Z, ?N)@\prologall(xpath),
+	load_structure(string(?Z), ?O, ?W, ?M).
+
+load_xml_structure(?X, ?W, ?M) :-  load_structure(?X, [dialect(xml)], ?W, ?M).
+
+load_sgml_structure(?X, ?W, ?M) :- load_structure(?X, [dialect(sgml)],?W, ?M).
+
+load_html_structure(?X, ?W, ?M) :-
+	dtd(html,?Dtd,?W)@\prologall(sgml),
+	load_structure(?X, [?Dtd, dialect(sgml)], ?W, ?M).
+
+load_xhtml_structure(?X, ?W, ?M) :-
+	dtd(xhtml,?Dtd,?W)@\prologall(sgml),
+	load_structure(?X, [?Dtd, dialect(sgml)], ?W, ?M).
+
+load_structure(?_, ?_, ?_, ?M) :- 
+	isvar{?M},
+	!,
+	abort('[FLRXML]: Module name must be bound')@\sys.
+load_structure(?X, ?Z, ?W, ?M) :-
+	p2h{?XP,?X}, // source
+	p2h{?ZP,?Z}, // options
+	// Don't use prologall here.
+	// There is no need to convert ?Y to hilog and back.
+	// Also, XSB chokes on huge terms in p2h.
+	load_structure(?XP, ?Y, ?ZP, ?W)@\prolog(sgml),
+	xml_parse_doc(?Y, ?M)@\prolog(flrxml),
+	insertrule_z{
+	    (?O1['$tag' -> ?Tag] :- ?_[?Tag->{?O1}])@?M,
+	    (?O2['$parent' -> ?O21] :- ?O21[?_->{?O2}])@?M,
+	    (?O3['$tag'(?N) -> ?Tag] :- ?O3['$child'(?N)->?_['$tag' -> ?Tag ]])@?M
+	},
+	insertrule_z{
+	    (?O4['$childrenList' -> ?ChildrenList]:-
+		?O4[?_->?_],
+		?ChildrenList = collectset{?Child|?O4['$child'(?_)->?Child]} )@?M
+	},
+	insertrule_z{
+	    (?O5['$tagList' -> ?TagList ] :- 
+		?O5[?_->?_], 
+		?TagList =
+	            collectset{?Tags|?O5['$child'(?_)->?_['$tag'-> ?Tags]]} )@?M
+	},
+	insertrule_z{
+	    (?O6['$childrenNum' -> ?Counter ]:- 
+		 ?O6[?_->?_],
+		 ?Counter = count{?Children|?O6['$child'(?_)->?Children]} )@?M
+	},
+	!.

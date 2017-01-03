@@ -1,0 +1,81 @@
+#! /bin/sh
+
+# Generate the files that contain the Prolog & Flora installation directories
+
+OBJEXT=.xwam
+PROLOGEXT=.P
+
+if test "$2" != compiling -a ! -f genincludes/flrtable.flh ; then
+    echo ""
+    echo "+++++ Flora-2 must first be compiled with the makeflora command"
+    echo ""
+    exit 1
+fi
+
+if test "$1" = none -o -z "$1" ; then
+   PROLOG=`which xsb`
+else
+   PROLOG="$1"
+fi
+
+if [ -z "$PROLOG" ] ; then
+    echo ""
+    echo "+++++ Usage:"
+    if [ -n "$2" ] ; then
+	echo "+++++   makeflora all path-for-/XSB/bin/xsb"
+    else
+	echo "+++++   floraconfig path-for-/XSB/bin/xsb"
+    fi
+    echo ""
+    exit 1
+else
+    echo ""
+    echo "+++++ Using Prolog engine: $PROLOG"
+    echo ""
+fi
+
+("$PROLOG" -e "halt." 2>&1) > /dev/null || xsbinstallerror=true
+if test -n "$xsbinstallerror" ; then
+    echo ""
+    echo "+++++ Engine $PROLOG failed to start:"
+    echo "+++++    XSB has not been configured properly at that location"
+    echo ""
+    exit 1
+fi
+
+("$PROLOG" -e "[flrdepstest]. halt." 2>&1) > /dev/null || xsbsourceserror=true
+if test -n "$xsbsourceserror" ; then
+    echo ""
+    echo "+++++ XSB sources do not seem to have been installed"
+    echo ""
+    exit 1
+fi
+
+# This causes recompilation of all .flr files by cleaning out
+# the .xsb/flora-* directories.
+/bin/rm -f "$HOME"/.xsb/flora*/*$PROLOGEXT "$HOME"/.xsb/flora*/*$OBJEXT
+/bin/rm -f "$HOME"/.xsb/ergo*/*$PROLOGEXT "$HOME"/.xsb/ergo*/*$OBJEXT
+
+"$PROLOG" -e "[flrconfig]. halt." || florausageerror=true
+if test -n "$florausageerror" ; then
+    echo ""
+    echo "+++++ Failed to configure Flora-2"
+    echo "+++++ Please report to flora-users@lists.sf.net and include the log"
+    echo ""
+    exit 1
+elif test "$2" = compiling ; then
+    echo ""
+elif test "$2" = selfextract ; then
+    echo ""
+    echo "+++++ All is well: run Flora-2 using the script"
+    echo "+++++    ./flora2/runflora"
+    echo ""
+else
+    echo ""
+    echo "+++++ All is well: you can now run Flora-2 using the script"
+    echo "+++++    ./runflora"
+    echo ""
+fi
+
+default_tabling=flrincludes/.flora_default_tabling
+echo "" > $default_tabling

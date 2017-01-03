@@ -1,0 +1,5 @@
+/flora_prefix.h
+/ergoisms/
+/ergoact/
+*.def
+*.o

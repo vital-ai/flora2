@@ -1,0 +1,750 @@
+/* File:      flrdatatype.P  -- Builtin data types
+**
+** Author(s): Michael Kifer
+**
+** Contact:   flora-users@lists.sourceforge.net
+**
+** Copyright (C) by
+**      The Research Foundation of the State University of New York, 1999-2014.
+**
+** Licensed under the Apache License, Version 2.0 (the "License");
+** you may not use this file except in compliance with the License.
+** You may obtain a copy of the License at
+**
+**      http://www.apache.org/licenses/LICENSE-2.0
+**
+** Unless required by applicable law or agreed to in writing, software
+** distributed under the License is distributed on an "AS IS" BASIS,
+** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+** See the License for the specific language governing permissions and
+** limitations under the License.
+**
+**
+*/
+
+
+:- compiler_options([xpp_on]).
+#mode standard Prolog
+
+#include "flora_terms.flh"
+#include "flora_characters.flh"
+#include "flora_errors.flh"
+
+#include "flora_exceptions.flh"
+
+:- import
+	flora_abort/1,
+	flora_get_substring/4,
+	flora_concat_atoms/2,
+	flora_concat_strings/2
+   from flrporting.
+
+:- import flora_decode_oid_as_atom/2 from flrdecode.
+
+:- import flratom_begins_with/2 from flora_ground.
+
+:- import
+	flora_toLower/2,
+	flora_second_repr/2,
+	flora_int_to_atom_with_leading_zeros/3
+   from flrdatatype_utils.
+
+:- import
+	flora_atom_to_number/2,
+	flora_dt_add_duration_to_duration/3,
+	flora_dt_add_duration_to_datetime/3,
+	flora_dt_add_duration_to_date/3,
+	flora_dt_add_duration_to_time/3
+   from flrtime_arith.
+
+:- import
+	flora_make_datatype/3
+   from flrdatatype_parse.
+
+:- import 
+	append/3,
+	member/2
+   from basics.
+
+:- export
+	flora_same_type/2,
+	flora_type_numeric_value/2,
+	flora_builtin_datatype/1,
+	flora_primitive_datatype/1,
+	flora_builtin_class/1,
+	flora_canonical_type_name/2,
+	flora_w3c_type_name/2,
+	flora_synonymous_type_names/2,
+	flora_printable_type_representation/2,
+	flora_datatype_raw_value/2,
+	flora_datatype_name/2,
+	flora_dt_add/3,
+	flora_special_datatype_internal_representation/2,
+	flora_parsed_datatypelist/2.
+
+:- export
+	datesign/2,
+	year/2, day/2, month/2, hour/2, minute/2, second/2, 
+	zoneSign/2, zoneHour/2, zoneMinute/2,
+	scheme/2, user/2, host/2, port/2, path/2, query/2, fragment/2.
+
+:- export
+	'\\issymbol'/1,
+	'\\isiri'/1,
+	'\\isstring'/1,
+	'\\isboolean'/1.
+
+%% Ergo-only methods. In Flora-2, these just give errors
+:- export
+	to_dateTime/3, to_dateTime/5,
+	date_time_minus/3,
+	datetime_to_time/3.
+
+
+flora_parsed_datatypelist(DtLst,LitList) :-
+	nonvar(DtLst),
+	DtLst \= '_$VAR'(_),
+	DtLst = FL_DATATYPELIST(LitList).
+
+/*
+   We represent only nontrivial data types, like dateTime, time, etc.
+   Strings, integers, floats are considered trivial and are treated
+   internally by the compiler (and the underlying Prolog).
+*/
+
+:- table flora_canonical_type_name/2 as opaque.
+
+#mode save
+#mode nostring "\!#'"
+
+#define XML_SCHEMA_NS http://www.w3.org/2001/XMLSchema
+#define XML_SCHEMA_IRI(Type) 'i\bhttp://www.w3.org/2001/XMLSchema##1'
+#define XML_SCHEMA_NS_STR(Type) 'http://www.w3.org/2001/XMLSchema##1'
+
+%% Canonical type names are names under which we recognize data types internally
+%%flora_canonical_type_name('i\bhttp://www.w3.org/2001/XMLSchema#dateTime',FL_DATETIME) :- !.
+flora_canonical_type_name(XML_SCHEMA_IRI(dateTime),FL_DATETIME) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(dateTime),FL_DATETIME) :- !.
+flora_canonical_type_name(Type,FL_DATETIME) :-
+	flora_toLower(Type,'\\dt'),
+	!.
+flora_canonical_type_name(Type, FL_DATETIME) :-
+	flora_toLower(Type,Lower),
+	flora_toLower(FL_DATETIME,Lower),
+	!.
+
+flora_canonical_type_name(XML_SCHEMA_IRI(time),FL_TIME) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(time),FL_TIME) :- !.
+flora_canonical_type_name(Type,FL_TIME) :-
+	flora_toLower(Type,Lower),
+	flora_toLower(FL_TIME,Lower),
+	!.
+flora_canonical_type_name(Type,FL_TIME) :-
+	flora_toLower(Type,'\\t'),
+	!.
+
+flora_canonical_type_name(XML_SCHEMA_IRI(date),FL_DATE) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(date),FL_DATE) :- !.
+flora_canonical_type_name(Type,FL_DATE) :-
+	flora_toLower(Type,Lower),
+	flora_toLower(FL_DATE,Lower),
+	!.
+flora_canonical_type_name(Type,FL_DATE) :-
+	flora_toLower(Type,'\\d'),
+	!.
+
+flora_canonical_type_name('\\',    FL_IRI) :- !.
+flora_canonical_type_name(FL_URI, FL_IRI) :- !.
+flora_canonical_type_name('\\anyURI', FL_IRI) :- !.
+%%flora_canonical_type_name('http://www.w3.org/2007/rif#iri', FL_IRI) :- !.
+%%flora_canonical_type_name('http://www.w3.org/2007/rif#uri', FL_IRI) :- !.
+flora_canonical_type_name(Type,FL_IRI) :-
+	flora_toLower(Type,Lower),
+	(flora_toLower(FL_IRI,Lower) ; flora_toLower(FL_URI,Lower)),
+	!.
+
+flora_canonical_type_name('\\du', FL_DURATION) :- !.
+flora_canonical_type_name(XML_SCHEMA_IRI(duration), FL_DURATION) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(duration), FL_DURATION) :- !.
+flora_canonical_type_name(Type, FL_DURATION) :-
+	flora_toLower(Type,Lower),
+	flora_toLower(FL_DURATION,Lower),
+	!.
+
+flora_canonical_type_name(XML_SCHEMA_IRI(short), FL_LONG) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(short), FL_LONG) :- !.
+flora_canonical_type_name(XML_SCHEMA_IRI(integer), FL_LONG) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(integer), FL_LONG) :- !.
+flora_canonical_type_name(XML_SCHEMA_IRI(long), FL_LONG) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(long), FL_LONG) :- !.
+flora_canonical_type_name(XML_SCHEMA_IRI(nonNegativeInteger), FL_LONG) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(nonNegativeInteger), FL_LONG) :- !.
+flora_canonical_type_name(XML_SCHEMA_IRI(positiveInteger), FL_LONG) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(positiveInteger), FL_LONG) :- !.
+flora_canonical_type_name(Type, FL_LONG) :-
+	flora_toLower(Type,Lower),
+	flora_toLower(FL_LONG,Lower),
+	!.
+flora_canonical_type_name(Type, FL_LONG) :-
+	flora_toLower(Type,'\\int'),
+	!.
+%% integers should be made into their own data type
+flora_canonical_type_name(Type, FL_LONG) :-
+	(flora_toLower(Type,FL_INTEGER) ; flora_toLower(Type,FL_SHORT)),
+	!.
+
+flora_canonical_type_name(XML_SCHEMA_IRI(decimal), FL_DOUBLE) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(decimal), FL_DOUBLE) :- !.
+flora_canonical_type_name(XML_SCHEMA_IRI(real), FL_DOUBLE) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(real), FL_DOUBLE) :- !.
+flora_canonical_type_name(XML_SCHEMA_IRI(double), FL_DOUBLE) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(double), FL_DOUBLE) :- !.
+flora_canonical_type_name(Type, FL_DOUBLE) :-
+	flora_toLower(Type,FL_DOUBLE),
+	!.
+flora_canonical_type_name(Type, FL_DOUBLE) :-
+	(flora_toLower(Type,FL_FLOAT) ; flora_toLower(Type,FL_REAL)),
+	!.
+%% decimals should be made into their own data type
+flora_canonical_type_name(Type, FL_DOUBLE) :-
+	flora_toLower(Type,FL_DECIMAL),
+	!.
+%%flora_canonical_type_name(Type, FL_DOUBLE) :-
+%%	flora_toLower(Type,FL_NUMBER),
+%%	!.
+
+flora_canonical_type_name(XML_SCHEMA_IRI(string), FL_STRING) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(string), FL_STRING) :- !.
+flora_canonical_type_name(Type, FL_STRING) :-
+	flora_toLower(Type,FL_STRING),
+	!.
+flora_canonical_type_name(Type, FL_STRING) :-
+	flora_toLower(Type,'\\str'),
+	!.
+
+flora_canonical_type_name(Type, FL_CHARLIST) :-
+	flora_toLower(Type,FL_CHARLIST),
+	!.
+
+flora_canonical_type_name(XML_SCHEMA_IRI(boolean), FL_BOOL) :- !.
+flora_canonical_type_name(XML_SCHEMA_NS_STR(boolean), FL_BOOL) :- !.
+flora_canonical_type_name(Type, FL_BOOL) :-
+	flora_toLower(Type,FL_BOOL),
+	!.
+flora_canonical_type_name(Type, FL_BOOL) :-
+	flora_toLower(Type,'\\bool'),
+	!.
+
+#mode restore
+
+%% Catch-all
+flora_canonical_type_name(X,X) :- !.
+
+%% w3c_type_name/2 : reverse (in a sense) of canonical type names
+%%                   Takes a canonical name and converts it into a W3C type
+%%                   name, if possible
+
+#mode save
+#mode nostring "\!#'"
+
+flora_w3c_type_name(FL_DATETIME,XML_SCHEMA_NS_STR(dateTime)) :- !.
+flora_w3c_type_name(FL_TIME,XML_SCHEMA_NS_STR(time)) :- !.
+flora_w3c_type_name(FL_DATE,XML_SCHEMA_NS_STR(date)) :- !.
+flora_w3c_type_name(FL_DURATION,XML_SCHEMA_NS_STR(duration)) :- !.
+flora_w3c_type_name(FL_SHORT,XML_SCHEMA_NS_STR(short)) :- !.
+flora_w3c_type_name(FL_INTEGER,XML_SCHEMA_NS_STR(integer)) :- !.
+flora_w3c_type_name(FL_LONG,XML_SCHEMA_NS_STR(long)) :- !.
+flora_w3c_type_name(FL_DOUBLE,XML_SCHEMA_NS_STR(double)) :- !.
+flora_w3c_type_name(FL_FLOAT,XML_SCHEMA_NS_STR(float)) :- !.
+flora_w3c_type_name(FL_REAL,XML_SCHEMA_NS_STR(real)) :- !.
+flora_w3c_type_name(FL_DECIMAL,XML_SCHEMA_NS_STR(decimal)) :- !.
+flora_w3c_type_name(FL_STRING,XML_SCHEMA_NS_STR(string)) :- !.
+flora_w3c_type_name(FL_BOOL,XML_SCHEMA_NS_STR(boolean)) :- !.
+flora_w3c_type_name(X,X) :- !.
+
+#mode restore
+
+
+flora_synonymous_type_names(X,Y) :-
+	flora_canonical_type_name(X,Z),
+	flora_canonical_type_name(Y,Z).
+
+%% Builtin data types
+flora_builtin_datatype(X) :- var(X), !, fail.
+flora_builtin_datatype(FL_DATETIME).
+flora_builtin_datatype(FL_DATE).
+flora_builtin_datatype(FL_TIME).
+flora_builtin_datatype(FL_DURATION).
+flora_builtin_datatype(FL_INTEGER).
+flora_builtin_datatype(FL_LONG).
+flora_builtin_datatype(FL_SHORT).
+flora_builtin_datatype(FL_DECIMAL).
+flora_builtin_datatype(FL_DOUBLE).
+flora_builtin_datatype(FL_REAL).
+flora_builtin_datatype(FL_FLOAT).
+flora_builtin_datatype(FL_NUMBER).
+flora_builtin_datatype(FL_IRI).
+flora_builtin_datatype(FL_BOOL).
+flora_builtin_datatype(FL_SYMBOL).
+flora_builtin_datatype(FL_STRING).
+flora_builtin_datatype(FL_CHARLIST).
+flora_builtin_datatype(FL_LISTTYPE).
+
+flora_primitive_datatype(FL_SYMBOL).
+flora_primitive_datatype(FL_STRING).
+flora_primitive_datatype(FL_INTEGER).
+flora_primitive_datatype(FL_LONG).
+flora_primitive_datatype(FL_SHORT).
+flora_primitive_datatype(FL_DOUBLE).
+flora_primitive_datatype(FL_REAL).
+flora_primitive_datatype(FL_FLOAT).
+flora_primitive_datatype(FL_NUMBER).
+flora_primitive_datatype(FL_DECIMAL).
+flora_primitive_datatype(FL_BOOL).
+
+flora_builtin_class(FL_TOPTYPE) :- !.
+flora_builtin_class(X) :- flora_builtin_datatype(X).
+
+%% Canonical representation of data types
+%% Need to expand!
+
+/* // This is for debugging
+flora_printable_type_representation(Obj,[Type,Repr]) :-
+	(nonvar(Type) ; nonvar(Repr)),
+	!,
+	flora_printable_type_representation(Obj,OV),
+	flora_abort(['The value part in ',OV,
+		     '[_toSymbol->', Repr,
+		     '] must be a variable, but is not']).
+*/
+
+%% no sense converting Var into anything
+flora_printable_type_representation(Var,_) :-
+	var(Var),
+	!,
+	fail.
+%% This tries to strip the outer FL_DATATYPE and see if the result can be parsed
+flora_printable_type_representation(FL_DATATYPE(Literal,_),Repr) :-
+	\+atomic(Literal),
+	flora_printable_type_representation(Literal,Repr),
+	!.
+
+flora_printable_type_representation(FL_TIME(Hr,Min,Sec,ZoneS,ZoneH,ZoneM,_NumericVal),
+				    [FL_TIME,Repr]) :-
+	flora_second_repr(Sec,SecRepr),
+	timezone_repr(ZoneS,ZoneH,ZoneM,ZoneRepr),
+	flora_int_to_atom_with_leading_zeros(Hr,2,HrChars),
+	flora_int_to_atom_with_leading_zeros(Min,2,MinChars),
+	flora_concat_strings([HrChars,':',MinChars,':',SecRepr,ZoneRepr], Repr),
+	!.
+flora_printable_type_representation(FL_DATETIME(DSign,Yr,Mon,Day,Hr,Min,Sec,ZoneS,ZoneH,ZoneM,_NumericVal),[FL_DATETIME,Repr]) :-
+	(DSign>0 -> PrintSign = ''; PrintSign = '-'),
+	timezone_repr(ZoneS,ZoneH,ZoneM,ZoneRepr),
+	flora_second_repr(Sec,SecRepr),
+	flora_int_to_atom_with_leading_zeros(Yr,4,YrChars),
+	flora_int_to_atom_with_leading_zeros(Mon,2,MonChars),
+	flora_int_to_atom_with_leading_zeros(Day,2,DayChars),
+	( Hr==0, Min==0, (Sec=='', ! ; Sec==0)
+	-> flora_concat_strings([PrintSign,YrChars,'-',MonChars,'-',DayChars,ZoneRepr], Repr)
+	;
+	    flora_int_to_atom_with_leading_zeros(Hr,2,HrChars),
+	    flora_int_to_atom_with_leading_zeros(Min,2,MinChars),
+	    flora_concat_strings([PrintSign,
+				  YrChars,'-',MonChars,'-',DayChars,'T',
+				  HrChars,':',MinChars,':',SecRepr,ZoneRepr],
+				 Repr)
+	),
+	!.
+
+flora_printable_type_representation(FL_DURATION(DSign,Yr,Mon,Day,Hr,Min,Sec,_NumericVal),[FL_DURATION,Repr]) :-
+	(DSign>0 -> PrintSign = ''; PrintSign = '-'),
+	flora_second_repr(Sec,SecRepr),
+	flora_int_to_atom_with_leading_zeros(Yr,4,YrChars),
+	flora_int_to_atom_with_leading_zeros(Mon,2,MonChars),
+	flora_int_to_atom_with_leading_zeros(Day,2,DayChars),
+	flora_int_to_atom_with_leading_zeros(Hr,2,HrChars),
+	flora_int_to_atom_with_leading_zeros(Min,2,MinChars),
+	flora_concat_strings([PrintSign, 'P',
+			      YrChars,'Y',MonChars,'M',DayChars,'DT',
+			      HrChars,'H',MinChars,'M',SecRepr,'S'],
+			     Repr),
+	!.
+
+flora_printable_type_representation(FL_DATE(DSign,Yr,Mon,Day,ZoneS,ZoneH,ZoneM,_NumericVal),[FL_DATE,Repr]) :-
+	(DSign>0 -> PrintSign = ''; PrintSign = '-'),
+	timezone_repr(ZoneS,ZoneH,ZoneM,ZoneRepr),
+	flora_int_to_atom_with_leading_zeros(Yr,4,YrChars),
+	flora_int_to_atom_with_leading_zeros(Mon,2,MonChars),
+	flora_int_to_atom_with_leading_zeros(Day,2,DayChars),
+	flora_concat_strings([PrintSign, YrChars,'-',MonChars,'-',DayChars,ZoneRepr], Repr),
+	!.
+
+flora_printable_type_representation(FL_IRI(Protocol, % http://
+					   Separator, % ://, :, or whatever
+					   User,     % user@
+					   Host,     % host:port
+					   Port,
+					   Path,
+					   Query, % ?query
+					   Fragm  % #fragment
+					  ),
+				    [FL_IRI,Repr]) :-
+	flora_concat_strings([Protocol,Separator],Protocol1),
+	(User == '' -> User1='' ; flora_concat_strings([User,'@'],User1)),
+	(Host == '' -> Host1='' ; Host1=Host),
+	(Port == '' -> Port1='' ; flora_concat_strings([':',Port],Port1)),
+	(Query == '' -> Query1='' ; flora_concat_strings(['?',Query],Query1)),
+	(Fragm == '' -> Fragm1='' ; flora_concat_strings(['#',Fragm],Fragm1)),
+	flora_concat_strings([Protocol1,User1,Host1,Port1,Path,Query1,Fragm1],
+			     Repr),
+        !.
+flora_printable_type_representation(FL_STRING(Val),[FL_STRING,Val]) :- !.
+%% this is used for special data types _iri and _string, as they are
+%% represented internally as atoms beginning with FL_IRI_TYPE_PREFIX
+%% and FL_STRING_TYPE_PREFIX
+flora_printable_type_representation(Val,[DatatypeName,DTVal]) :-
+	atom(Val),
+	flora_get_substring(Val,0,2,TypePrefix),
+	special_datatype_prefix(TypePrefix,DatatypeName),
+	!,
+	flora_get_substring(Val,2,-1,DTVal).
+
+%%flora_printable_type_representation(FL_INTEGER(Val),[FL_INTEGER,Val]) :- !.
+flora_printable_type_representation(Val,[FL_LONG,Val]) :-
+	integer(Val),
+	!.
+flora_printable_type_representation(Val,[FL_DOUBLE,Val]) :-
+	float(Val),
+	!.
+flora_printable_type_representation(FL_LONG(Val),[FL_LONG,Val]) :- !.
+flora_printable_type_representation(FL_DOUBLE(Val),[FL_DOUBLE,Val]) :- !.
+%%flora_printable_type_representation(FL_FLOAT(Val),[FL_FLOAT,Val]) :- !.
+%%flora_printable_type_representation(FL_DECIMAL(Val),[FL_DECIMAL,Val]) :- !.
+flora_printable_type_representation(FL_BOOL(Val),[FL_BOOL,Val]) :- !.
+flora_printable_type_representation(FL_CHARLIST(Val),[FL_CHARLIST,ValRepr]) :-
+	!,
+	is_charlist(Val),
+	atom_codes(ValRepr,Val).
+flora_printable_type_representation(FL_LISTTYPE(Val),[FL_LISTTYPE,ValP]) :-
+	!,
+	flora_decode_oid_as_atom(Val,ValP).
+
+%% Lists of types
+flora_printable_type_representation(FL_DATATYPE(TypeName,LitList),
+				    [TypeName,LitList]) :-
+	flora_parsed_datatypelist(LitList,_),
+	!.
+
+%% Catch-all
+%% Literals are represented as charlists
+flora_printable_type_representation(FL_DATATYPE(TypeName,Literal),
+				    [TypeName,LiteralAtm]) :-
+	is_charlist(Literal),
+	atom_codes(LiteralAtm,Literal),
+	!.
+
+flora_printable_type_representation(FL_DATATYPE(TypeName,Literal),_) :-
+	flora_abort([Literal,'^^',TypeName,': ', ERROR_DATATYPE_LITERAL]).
+
+
+timezone_repr(ZSign,ZH,ZM,Repr) :-
+	(ZH=0, ZM=0 -> Repr = ''
+	; 
+	    (ZSign>0 -> PrintZSign = ('+'); PrintZSign = ('-')),
+	    flora_int_to_atom_with_leading_zeros(ZH,2,ZHChars),
+	    flora_int_to_atom_with_leading_zeros(ZM,2,ZMChars),
+	    flora_concat_strings([PrintZSign, ZHChars, ':', ZMChars],Repr)
+	).
+
+
+flora_type_numeric_value(FL_DATATYPE(Literal,_),Val) :-
+	flora_type_numeric_value(Literal,Val),
+	!.
+flora_type_numeric_value(FL_DATETIME(_,_,_,_,_,_,_,_,_,_,Val),Val) :- !.
+flora_type_numeric_value(FL_DURATION(_,_,_,_,_,_,_,Val),Val) :- !.
+flora_type_numeric_value(FL_DATE(_,_,_,_,_,_,_,Val),Val) :- !.
+flora_type_numeric_value(FL_TIME(_,_,_,_,_,_,Val),Val) :- !.
+flora_type_numeric_value(T,T) :- number(T).
+
+
+flora_same_type(T1,T2) :- integer(T1), integer(T2).
+flora_same_type(T1,T2) :- float(T1), float(T2).
+flora_same_type(T1,T2) :- atom(T1), atom(T2).
+flora_same_type(T1,T2) :- is_list(T1), is_list(T2).
+flora_same_type(FL_DATATYPE(_,DT),FL_DATATYPE(_,DT)) :- !.
+flora_same_type(Type1,Type2) :- functor(Type1,F,A), functor(Type2,F,A).
+
+%% time, date, and dateTime
+hour(FL_DATATYPE(T,_), Val) :- hour(T,Val), !.
+hour(FL_TIME(Hr,_Min,_Sec,_ZoneS,_ZoneH,_ZoneM,_), Hr) :-
+	!.
+hour(FL_DURATION(_DSign,_Yr,_Mo,_D,Hr,_Min,_Sec,_), Hr) :-
+	!.
+hour(FL_DATETIME(_DSign,_Yr,_Mon,_Day,Hr,_Min,_Sec,_ZoneS,_ZoneH,_ZoneM,_), Hr) :-
+	!.
+minute(FL_DATATYPE(T,_), Val) :- minute(T,Val), !.
+minute(FL_TIME(_Hr,Min,_Sec,_ZoneS,_ZoneH,_ZoneM,_), Min) :-
+	!.
+minute(FL_DURATION(_DSign,_Yr,_Mo,_D,_Hr,Min,_Sec,_), Min) :-
+	!.
+minute(FL_DATETIME(_DSign,_Yr,_Mon,_Day,_Hr,Min,_Sec,_ZoneS,_ZoneH,_ZoneM,_), Min) :-
+	!.
+second(FL_DATATYPE(T,_), Val) :- second(T,Val), !.
+second(FL_TIME(_Hr,_Min,SecAtm,_ZoneS,_ZoneH,_ZoneM,_), Sec) :-
+	flora_atom_to_number(SecAtm,Sec),
+	!.
+second(FL_DATETIME(_DSign,_Yr,_Mon,_Day,_Hr,_Min,SecAtm,_ZoneS,_ZoneH,_ZoneM,_), Sec) :-
+	flora_atom_to_number(SecAtm,Sec),
+	!.
+second(FL_DURATION(_DSign,_Yr,_Mon,_Day,_Hr,_Min,SecAtm,_), Sec) :-
+	flora_atom_to_number(SecAtm,Sec),
+	!.
+
+datesign(FL_DATATYPE(T,_), Val) :- datesign(T,Val), !.
+datesign(FL_DURATION(DSign,_Yr,_Mon,_Day,_Hr,_Min,_Sec,_), DSign) :-
+	!.
+datesign(FL_DATETIME(DSign,_Yr,_Mon,_Day,_Hr,_Min,_Sec,_ZoneS,_ZoneH,_ZoneM,_), DSign) :-
+	!.
+datesign(FL_DATE(DSign,_Yr,_Mon,_Day,_ZoneS,_ZoneH,_ZoneM,_), DSign) :-
+	!.
+
+year(FL_DATATYPE(T,_), Val) :- year(T,Val), !.
+year(FL_DATETIME(_DSign,Yr,_Mon,_Day,_Hr,_Min,_Sec,_ZoneS,_ZoneH,_ZoneM,_), Yr) :-
+	!.
+year(FL_DURATION(_DSign,Yr,_Mon,_Day,_Hr,_Min,_Sec,_), Yr) :-
+	!.
+year(FL_DATE(_DSign,Yr,_Mon,_Day,_ZoneS,_ZoneH,_ZoneM,_), Yr) :-
+	!.
+
+month(FL_DATATYPE(T,_), Val) :- month(T,Val), !.
+month(FL_DATETIME(_DSign,_Yr,Mon,_Day,_Hr,_Min,_Sec,_ZoneS,_ZoneH,_ZoneM,_), Mon) :-
+	!.
+month(FL_DURATION(_DSign,_Yr,Mon,_Day,_Hr,_Min,_Sec,_), Mon) :-
+	!.
+month(FL_DATE(_DSign,_Yr,Mon,_Day,_ZoneS,_ZoneH,_ZoneM,_), Mon) :-
+	!.
+
+day(FL_DATATYPE(T,_), Val) :- day(T,Val), !.
+day(FL_DATETIME(_DSign,_Yr,_Mon,Day,_Hr,_Min,_Sec,_ZoneS,_ZoneH,_ZoneM,_), Day) :-
+	!.
+day(FL_DURATION(_DSign,_Yr,_Mon,Day,_Hr,_Min,_Sec,_), Day) :-
+	!.
+day(FL_DATE(_DSign,_Yr,_Mon,Day,_ZoneS,_ZoneH,_ZoneM,_), Day) :-
+	!.
+
+%% sign is 1 or -1
+zoneSign(FL_DATATYPE(T,_), Val) :- zoneSign(T,Val), !.
+zoneSign(FL_DATETIME(_DSign,_Yr,_Mon,_Day,_Hr,_Min,_Sec,ZSign,_ZHr,_ZMin,_), ZSign) :- !.
+zoneSign(FL_DATE(_DSign,_Yr,_Mon,_Day,ZSign,_ZHr,_ZMin,_), ZSign) :- !.
+zoneSign(FL_TIME(_Hr,_Min,_Sec,ZSign,_ZHr,_ZMin,_), ZSign) :- !.
+
+zoneHour(FL_DATATYPE(T,_), Val) :- zoneHour(T,Val), !.
+zoneHour(FL_DATETIME(_DSign,_Yr,_Mon,_Day,_Hr,_Min,_Sec,_ZSign,ZHr,_ZMin,_), ZHr) :-
+	!.
+zoneHour(FL_DATE(_DSign,_Yr,_Mon,_Day,_ZSign,ZHr,_ZMin,_), ZHr) :-
+	!.
+zoneHour(FL_TIME(_Hr,_Min,_Sec,_ZSign,ZHr,_ZMin,_), ZHr) :-
+	!.
+
+zoneMinute(FL_DATATYPE(T,_), Val) :- zoneMinute(T,Val), !.
+zoneMinute(FL_DATETIME(_DSign,_Yr,_Mon,_Day,_Hr,_Min,_Sec,_ZSign,_ZHr,ZMin,_), ZMin) :-
+	!.
+zoneMinute(FL_DATE(_DSign,_Yr,_Mon,_Day,_ZSign,_ZHr,ZMin,_), ZMin) :-
+	!.
+zoneMinute(FL_TIME(_Hr,_Min,_Sec,_ZSign,_ZHr,ZMin,_), ZMin) :-
+	!.
+
+
+%% URI
+scheme(FL_DATATYPE(T,_), Val) :- scheme(T,Val), !.
+scheme(FL_IRI(Scheme,_Separator,_User,_Host,_Port,_Path,_Query,_Fragm),Scheme) :-
+	!.
+user(FL_DATATYPE(T,_), Val) :- user(T,Val), !.
+user(FL_IRI(_Proto,_Separator,User,_Host,_Port,_Path,_Query,_Fragm),User) :-
+	!.
+host(FL_DATATYPE(T,_), Val) :- host(T,Val), !.
+host(FL_IRI(_Proto,_Separator,_User,Host,_Port,_Path,_Query,_Fragm),Host) :-
+	!.
+port(FL_DATATYPE(T,_), Val) :- port(T,Val), !.
+port(FL_IRI(_Proto,_Separator,_User,_Host,Port,_Path,_Query,_Fragm),Port) :-
+	!.
+path(FL_DATATYPE(T,_), Val) :- path(T,Val), !.
+path(FL_IRI(_Proto,_Separator,_User,_Host,_Port,Path,_Query,_Fragm),Path) :-
+	!.
+query(FL_DATATYPE(T,_), Val) :- query(T,Val), !.
+query(FL_IRI(_Proto,_Separator,_User,_Host,_Port,_Path,Query,_Fragm),Query) :-
+	!.
+fragment(FL_DATATYPE(T,_), Val) :- fragment(T,Val), !.
+fragment(FL_IRI(_Proto,_Separator,_User,_Host,_Port,_Path,_Query,Fragm),Fragm) :-
+	!.
+
+
+flora_datatype_raw_value(FL_DATATYPE(Val,Name), Raw) :-
+	compound(Val),
+	(\+is_list(Val); Name == FL_LISTTYPE),
+	!,
+	(Val = FL_DATATYPE(_,Raw) -> true
+	; Val =.. [TypeName|Raw1],
+	    (member(TypeName,[FL_LONG,FL_DOUBLE,FL_STRING,FL_INTEGER,FL_DECIMAL,FL_BOOL,FL_LISTTYPE])
+	    -> Raw1 = [Raw|_]
+	    ;
+		Raw1=Raw
+	    )
+	).
+flora_datatype_raw_value(Val,Raw) :-
+	is_charlist(Val),
+	!,
+	atom_codes(Raw,Val).
+flora_datatype_raw_value(Val,Raw) :-
+	atom(Val),
+	special_datatype_prefix(Prefix,_),
+	flratom_begins_with(Val,Prefix),
+	!,
+	flora_get_substring(Val,2,-1,Raw).
+flora_datatype_raw_value(Val,Val).
+
+
+flora_datatype_name(Var,_) :-
+	var(Var),
+	!,
+	fail.
+flora_datatype_name(Val, FL_SYMBOL) :-
+	'\\issymbol'(Val),
+	!.
+flora_datatype_name(FL_DATATYPE(_Val,Name), Name) :- !.
+flora_datatype_name(Val, FL_LONG) :-
+	integer(Val),
+	!.
+flora_datatype_name(Val, FL_DOUBLE) :-
+	float(Val),
+	!.
+flora_datatype_name(Val, FL_STRING) :-
+	'\\isstring'(Val),
+	!.
+flora_datatype_name(Val, FL_IRI) :-
+	'\\isiri'(Val),
+	!.
+flora_datatype_name(Val, FL_CHARLIST) :-
+	is_charlist(Val),
+	!.
+flora_datatype_name(Val, FL_LISTTYPE) :-
+	is_list(Val),
+	!.
+flora_datatype_name(Val, FL_BOOL) :-
+	(Val == FL_TRUECONST ; Val == FL_FALSECONST),
+	!.
+flora_datatype_name(Val, Type) :-
+	flora_canonical_type_name(Type,Type2),
+	Type \== Type2,
+	flora_datatype_name(Val,Type2).
+
+flora_dt_add(FL_DATATYPE(T,_), FL_DATATYPE(T2,_), Val) :-
+	flora_dt_add(T,T2,Val),
+	!.
+
+flora_dt_add(FL_TIME(Hr,Min,Sec,ZoneS,ZoneH,ZoneM,_),
+	     FL_DURATION(DSign,DYr,DMon,DDay,DHr,DMin,DSec,_),
+	     Result) :-
+	!,
+	flora_dt_add_duration_to_time((Hr,Min,Sec,ZoneS,ZoneH,ZoneM),
+				      (DSign,DYr,DMon,DDay,DHr,DMin,DSec),
+				      NewTimeArgs),
+	flora_make_datatype(FL_TIME,NewTimeArgs,Result).
+
+flora_dt_add(FL_DATE(Sgn,Yr,Mon,Day,ZSgn,ZHr,ZMin,_),
+	     FL_DURATION(DSgn,DYr,DMon,DDay,DHr,DMin,DSec,_),
+	     Result) :-
+	!,
+	flora_dt_add_duration_to_date((Sgn,Yr,Mon,Day,ZSgn,ZHr,ZMin),
+				      (DSgn,DYr,DMon,DDay,DHr,DMin,DSec),
+				      NewDArgs),
+	flora_make_datatype(FL_DATE,NewDArgs,Result).
+
+flora_dt_add(FL_DATETIME(Sgn,Yr,Mon,Day,Hr,Min,Sec,ZSgn,ZHr,ZMin,_),
+	     FL_DURATION(DSgn,DYr,DMon,DDay,DHr,DMin,DSec,_),
+	     Result) :-
+	!,
+	flora_dt_add_duration_to_datetime((Sgn,Yr,Mon,Day,Hr,Min,Sec,ZSgn,ZHr,ZMin),
+					  (DSgn,DYr,DMon,DDay,DHr,DMin,DSec),
+					  NewDTArgs),
+	flora_make_datatype(FL_DATETIME,NewDTArgs,Result).
+
+flora_dt_add(FL_DURATION(Sgn,Yr,Mon,Day,Hr,Min,Sec,_),
+	     FL_DURATION(Sgn2,Yr2,Mon2,Day2,Hr2,Min2,Sec2,_),
+	     Result) :-
+	!,
+	flora_dt_add_duration_to_duration((Sgn,Yr,Mon,Day,Hr,Min,Sec),
+					  (Sgn2,Yr2,Mon2,Day2,Hr2,Min2,Sec2),
+					  NewDurnArgs),
+	flora_make_datatype(FL_DURATION,NewDurnArgs,Result).
+
+flora_dt_add(FL_STRING(Val), FL_STRING(Val1), FL_STRING(Val2)) :-
+	!,
+	flora_concat_atoms([Val,Val1],Val2).
+
+flora_dt_add(FL_CHARLIST(Val), FL_CHARLIST(Val1), FL_CHARLIST(Val2)) :-
+	!,
+	append(Val,Val1,Val2).
+
+flora_dt_add(FL_LISTTYPE(Val), FL_LISTTYPE(Val1), FL_LISTTYPE(Val2)) :-
+	!,
+	append(Val,Val1,Val2).
+
+flora_dt_add(FL_DOUBLE(Val), FL_DOUBLE(Val1), FL_DOUBLE(Val2)) :-
+	!,
+	Val2 is Val+Val1.
+flora_dt_add(FL_DOUBLE(Val), FL_LONG(Val1), FL_DOUBLE(Val2)) :-
+	!,
+	Val2 is Val+Val1.
+
+flora_dt_add(FL_LONG(Val), FL_DOUBLE(Val1), FL_DOUBLE(Val2)) :-
+	!,
+	Val2 is Val+Val1.
+flora_dt_add(FL_LONG(Val), FL_LONG(Val1), FL_LONG(Val2)) :-
+	!,
+	Val2 is Val+Val1.
+
+
+flora_dt_add(Val, Val1, Val2) :-
+	is_list(Val), is_list(Val1),
+	!,
+	append(Val,Val1,Val2).
+
+flora_dt_add(Val, Val1, Val2) :-
+	number(Val), number(Val1), Val2 is Val+Val1.
+
+flora_special_datatype_internal_representation(FL_STRING(StringAtm),Repr) :-
+	!,
+	flora_concat_atoms([FL_STRING_TYPE_PREFIX,StringAtm],Repr).
+flora_special_datatype_internal_representation(FL_IRI(StringAtm),Repr) :-
+	!,
+	flora_concat_atoms([FL_IRI_TYPE_PREFIX,StringAtm],Repr).
+
+special_datatype_prefix(FL_STRING_TYPE_PREFIX,FL_STRING).
+special_datatype_prefix(FL_IRI_TYPE_PREFIX,FL_IRI).
+
+'\\isstring'(X) :- atom(X), flratom_begins_with(X,FL_STRING_TYPE_PREFIX).
+'\\isiri'(X)    :- atom(X), flratom_begins_with(X,FL_IRI_TYPE_PREFIX).
+'\\issymbol'(X) :-
+    	atom(X),
+	\+ flratom_begins_with(X,FL_STRING_TYPE_PREFIX),
+	\+ flratom_begins_with(X,FL_IRI_TYPE_PREFIX),
+	!.
+'\\isboolean'(FL_TRUECONST).
+'\\isboolean'(FL_FALSECONST).
+'\\isboolean'(FL_UNDEFCONST).
+
+
+#if exists("ergoisms/datatype_xtras.P") && exists("../ergoisms/ergo.switch")
+#include "ergoisms/datatype_xtras.P"
+#else
+:- import flora_abort/2 from flrporting.
+to_dateTime(_,_,_,_,_) :-
+	flora_abort('toDateTime/5 is an Ergo-only method',FLORA_ABORT_NOTRACE).
+to_dateTime(_,_,_) :-
+	flora_abort('toDateTime/3 is an Ergo-only method',FLORA_ABORT_NOTRACE).
+date_time_minus(_,_,_) :-
+	flora_abort('minus/1 is an Ergo-only method',FLORA_ABORT_NOTRACE).
+datetime_to_time(_,_,_) :-
+	flora_abort('dateTime[time->...] and dateTime[date->...] are Ergo-only methods',FLORA_ABORT_NOTRACE).
+#endif

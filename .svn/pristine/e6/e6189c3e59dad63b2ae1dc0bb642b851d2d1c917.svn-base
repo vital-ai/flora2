@@ -1,0 +1,10 @@
+test1=i5main${dd@main}${ee@main}
+test1=i6main${ff@main}${gg@main}
+test1=aaaamain${a[p1->?A]@main}_$_$_flora'udf_hilog_predicate(addf(2,3),2,main,?A)@\prolog
+test1=aaaamain${a[p2->?A]@main}_$_$_flora'udf_hilog_predicate(addf(1,2),2,main,?A)@\prolog
+test1=i1foo${a1@foo}${b1@foo}
+test1=i2foo${a2@foo}${b2@foo}
+test1=i3moo${aa1@moo}${bb1@moo}
+test1=i4moo${aa2@moo}${bb2@moo}
+test2 = 5 + 3 + 5 + 3
+test3 = aaaa + bar

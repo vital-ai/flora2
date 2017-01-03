@@ -1,0 +1,16 @@
+CVS
+*.conf
+*.log
+.#*
+.cvsignore
+.excludedFiles
+*.zip
+*.tar
+*.bz2
+*.gz
+*.Z
+*~
+*.bak
+flora-short.ppt
+abstract.txt
+Tarball.sh

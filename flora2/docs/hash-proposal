@@ -1,0 +1,47 @@
+Chang,
+I thought some more about the %-thing. In my earlier proposal I didn't mean
+that %p and %X should be treated as if they were distinct symbols like '%p'
+or '%X'. What I meant was that % would be an indicator that this is
+supposed to be treated as a non-tabled thing. Thus, for instance, 
+in %X the variable is X, not '%X'. So, %X(a) ~ %p(a) binds X to p; it
+doesn't bind %X to %p, because neither %p exists as a term not %X exists as
+a variable. In the above, % just indicates that the translation should be
+flapply'mod...(X,a) ~ flapply'mod...(p,a).
+Likewise, in a[%X], X is the variable and not %X. % here is just an indicator.
+
+We should prohibit %X to appear by itself as a predicate both in ...., %X,
+... and in %X~...
+This is because the user should really use regular variables here. There is
+nothing useful that % can tell us here. (Alternatively, we could let
+libmodlit and ~ to issue errors if X is bound to a tabled thing, but I
+don't see a good reason for that.)
+
+
+So, here is the refined proposal:
+
+1. Make the tokenizer recognize %symbol (no space in-between) as a special
+   parameterized symbol flNonTabled(symbol)
+   In this way % can still be used as a function symbol.
+
+   Also, %%X or %%p or %%'@*&' will be flagged as errors by the
+   tokenizer, but %X, %p, or %'@*&' will not be.
+   Currently the tokenizer recognizes certain combos of symbols, such as
+   %%$@% won't be recognized as an error. We should change the
+   tokenizer so that sequences of symbols that start with a %% will be
+   treated as errors.
+
+2. In the parser, flNonTabled(symbol) will be treated more or less
+   the same way as %(symbol) is treated now - no major changes here.
+
+   a. When flNonTabled(symbol)(...) occurs in the position of a method or of a
+      body/head literal (including reification) then it is treated as
+      %(symbol)(...) is treated
+      now. I.e., it is translated as flapply'mod'...(symbol,...) or
+      tran(..., symbol). Note: no % in the translation.
+
+   b. When flNonTabled(symbol) occurs in the positions of terms,
+      we issue a parser error.
+
+3. When %X occurs as a variable by itself in a body/head literal position
+   or as %X ~... then we issue a parser error.
+   then we can treat it in one of the following ways:

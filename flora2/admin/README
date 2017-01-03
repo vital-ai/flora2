@@ -1,0 +1,12 @@
+
+The release 1.1 (Loquat) of Flora-2 fixes a number of bugs and adds new
+features. This release includes self-contained Windows, Mac, and Linux
+installers.
+
+The installer flora2.run is for Linux/Mac/Cygwin/Other Unixes users.
+The installer Flora-2.exe is for Windows users.
+
+Details can be found in the release notes at
+http://flora.sourceforge.net/release_notes.html
+and the installation instructions are at
+http://flora.sourceforge.net/installation.html

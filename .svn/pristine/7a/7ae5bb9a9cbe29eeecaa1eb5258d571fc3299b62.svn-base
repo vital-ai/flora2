@@ -1,0 +1,31 @@
+Modified from NOTES for flora2.iss
+
+This directory contains files used when building Windows GUI 
+installers for Flora-2 + XSB using Inno Setup 5.2 (or a later version):
+
+	http://www.jrsoftware.org/isinfo.php
+
+In order to build the installer, perform the following steps:
+
+1. Install (or update if necessary) Inno Setup.
+
+2. Compile Flora-2 and XSB.
+
+2. Copy the "flora2.iss" file into your Desktop folder and open it (using
+   Inno Setup).
+
+3. The "flora2.iss" file assumes that Flora-2 is compiled and
+   available in the "H:\FLORA\bundle\flora2" folder and XSB in
+   "H:\FLORA\bundle\XSB". If that's not the case, edit the "flora2.iss"
+   file and change the definition of the variables "FlrBaseDir" and
+   XSBBaseDir to reflect the directory that you're using.
+
+4. Update the Flora-2 release number in "flora2.iss".
+   Also check the Flora-2 copyright information for possible updates.
+   Update the XSB release info.
+
+5. In the Inno Setup Compiler application, run the menu command
+   "Build > Compile".
+
+6. Assuming no build errors the generated installer will be found on
+   your Desktop inside the "Output" directory.

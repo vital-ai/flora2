@@ -1,0 +1,188 @@
+/* File:      include/flrbasetype_string.flh
+**
+** Author(s): Michael Kifer
+**
+** Contact:   flora-users@lists.sourceforge.net
+**
+** Copyright (C) by
+**      The Research Foundation of the State University of New York, 1999-2014.
+**
+** Licensed under the Apache License, Version 2.0 (the "License");
+** you may not use this file except in compliance with the License.
+** You may obtain a copy of the License at
+**
+**      http://www.apache.org/licenses/LICENSE-2.0
+**
+** Unless required by applicable law or agreed to in writing, software
+** distributed under the License is distributed on an "AS IS" BASIS,
+** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+** See the License for the specific language governing permissions and
+** limitations under the License.
+**
+**
+*/
+
+
+:- export{
+	?[startsWith(?)],
+	?[endsWith(?)],
+    	?[contains(?)],
+	?[concat(?)->?],
+	?[reverse->?],
+	?[length->?],
+	?[toUpper->?],
+	?[toLower->?],
+	?[substring(?,?)->?]}.
+
+// don't forget to apply rawValue to strings!!!
+// Otherwise, the prefix will stand in the way
+
+// startsWith
+?X^^\string[startsWith(?Y)] :- 
+	isnonvar{?X},
+	isatom{?Y},
+	!,
+    	flora_match_substring(?Y.rawValue,?X.rawValue,0)@\prolog(flrporting).
+?X^^\symbol[startsWith(?Y)] :-
+	isnonvar{?X},
+	isatom{?Y},
+	!,
+	flratom_begins_with(?X,?Y.rawValue)@\prolog(flora_ground).
+
+// endsWith
+?X^^\string[endsWith(?Y)] :- 
+	isnonvar{?X},
+	isatom{?Y},
+	!,
+	flratom_ends_with(?X.rawValue,?Y.rawValue)@\prolog(flora_ground).
+?X^^\symbol[endsWith(?Y)] :-
+	isnonvar{?X},
+	isatom{?Y},
+	!,
+	flratom_ends_with(?X,?Y.rawValue)@\prolog(flora_ground).
+
+// contains
+?X^^\string[contains(?Y)] :-
+	isnonvar{?X},
+	isatom{?Y},
+	!,
+    	flora_match_substring(?Y.rawValue,?X.rawValue,?)@\prolog(flrporting).
+?X^^\symbol[contains(?Y)] :-
+	isnonvar{?X},
+	isatom{?Y},
+    	!,
+    	flora_match_substring(?Y.rawValue,?X,?)@\prolog(flrporting).
+
+// concat
+// there is also \symbol[concat(...)] in flrbasetypes_symbol.flh
+?X^^\string[concat(?Y) -> ?R] :-
+	isnonvar{?X},
+	isatom{?Y},
+	!,
+    	flora_concat_atoms([?X.rawValue,?Y.rawValue],?R1)@\prolog(flrporting),
+	\string[toType(?R1)->?R].
+?X^^\symbol[concat(?Y) -> ?R] :-
+	isnonvar{?X},
+	isatom{?Y},
+	!,
+    	flora_concat_atoms([?X,?Y.rawValue],?R)@\prolog(flrporting).
+?X^^\charlist[concat(?Y^^\charlist) -> ?R] :-
+	isnonvar{?X},
+	isnonvar{?Y},
+	!,
+	append(?X,?Y,?R)@\prolog(basics).
+
+// reverse for \charlist is done by the \list-predicates
+// reverse
+?X^^\string[reverse -> ?R] :-
+	isnonvar{?X},
+	!,
+	atom_codes(?X.rawValue,?Codes)@\prolog,
+	reverse(?Codes,?CodesR)@\prolog(basics),
+	atom_codes(?R1,?CodesR)@\prolog,
+	\string[toType(?R1)->?R].
+?X^^\symbol[reverse -> ?R] :-
+	isnonvar{?X},
+	!,
+	atom_codes(?X,?Codes)@\prolog,
+	reverse(?Codes,?CodesRvrs)@\prolog(basics),
+	atom_codes(?R,?CodesRvrs)@\prolog.
+
+// length
+?X^^\string[length -> ?N] :-
+	isnonvar{?X},
+	!,
+    	flora_atom_length(?X.rawValue,?N)@\prolog(flrporting).
+?X^^\symbol[length -> ?N] :-
+    	isnonvar{?X},
+	!,
+    	flora_atom_length(?X,?N)@\prolog(flrporting).
+
+// toUpper
+?X^^\string[toUpper -> ?R] :-
+    	isnonvar{?X},
+	!,
+	flora_toUpper(?X.rawValue,?R1)@\prolog(flrdatatype_utils),
+	\string[toType(?R1)->?R].
+?X^^\symbol[toUpper -> ?R] :-
+    	isnonvar{?X},
+	!,
+	flora_toUpper(?X,?R)@\prolog(flrdatatype_utils).
+?X^^\charlist[toUpper -> ?R] :-
+        isnonvar{?X},
+	!,
+	flora_toUpper(?X,?R1)@\prolog(flrdatatype_utils),
+	atom_codes(?R1,?R)@\prolog.
+
+// toLower
+?X^^\string[toLower -> ?R] :-
+        isnonvar{?X},
+	!,
+	flora_toLower(?X.rawValue,?R1)@\prolog(flrdatatype_utils),
+	\string[toType(?R1)->?R].
+?X^^\symbol[toLower -> ?R] :-
+        isnonvar{?X},
+	!,
+	flora_toLower(?X,?R)@\prolog(flrdatatype_utils).
+?X^^\charlist[toLower -> ?R] :-
+        isnonvar{?X},
+	!,
+	flora_toLower(?X,?R1)@\prolog(flrdatatype_utils),
+	atom_codes(?R1,?R)@\prolog.
+
+// substring
+?X^^\string[substring(?Beg,?End) -> ?R] :-  // dead code
+        isnonvar{?X},
+	isinteger{?Beg}, isinteger{?End},
+	!,
+	flora_get_substring(?X.rawValue,?Beg,?End,?R1)@\prolog(flrporting),
+	\string[toType(?R1)->?R].
+?X^^\symbol[substring(?Beg,?End) -> ?R] :-
+        isnonvar{?X},
+	isinteger{?Beg}, isinteger{?End},
+	!,
+	flora_get_substring(?X,?Beg,?End,?R)@\prolog(flrporting).
+?X^^\charlist[substring(?Beg,?End) -> ?R] :-
+        isnonvar{?X},
+	isinteger{?Beg}, isinteger{?End},
+	!,
+	atom_codes(?XX,?X)@\prolog,
+	flora_get_substring(?XX,?Beg,?End,?R1)@\prolog(flrporting),
+	atom_codes(?R1,?R)@\prolog.
+// ?Beg/?End unbound
+?X[substring(?Beg,?End) -> ?Y] :-
+    	(isatom{?X} ; ischarlist{?X}),
+	(isatom{?Y} ; ischarlist{?Y}),
+	!,
+    	flora_match_substring(?Y.rawValue,?X.rawValue,forward,?Beg,?End)@\prolog(flrporting).
+/*
+// error
+?X[substring(?Beg,?End) -> ?R] :-
+        abort(['In ?Str[substring(?Beg,?End)->?Sub]@\basetype:\n\t?Str must be a string/symbol/charlist and either\n\t?Sub must be a string/symbol/charlist or ?Beg, ?End must be integers.\n\tActual call: ',
+	        ?X, '[substring(', ?Beg, ',', ?End, ')->', ?R, ']'])@\system.
+*/
+
+
+#if exists("ergoisms/pcre.flh") && exists("../../ergoisms/ergo.switch")
+#include "ergoisms/pcre.flh"
+#endif

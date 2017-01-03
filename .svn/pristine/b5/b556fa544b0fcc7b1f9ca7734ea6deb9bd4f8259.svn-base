@@ -1,0 +1,8 @@
+
+?- ?X = '00\u63a|\x34|Y\u41a|www', writeln(tst1=?X)@\plg.
+?- ?X = '00\u63a|x34\Y\u41a|www', writeln(tst2=?X)@\plg.
+?- ?X = '00\u63a|x34\Y\u41a', \true. // test3 HEX expected
+?- ?X = '00\u63abc2345|x34\Y\u41a|', \true. // test4 unicode too long
+?- ?X = '00\u63abXc2345\x34|Y\u41a', \true. // test5 HEX expected
+?- ?X = '00\u63abc234|x34|Y\u41a|', writeln(tst6=?X)@\plg. // unicode exactly 8
+

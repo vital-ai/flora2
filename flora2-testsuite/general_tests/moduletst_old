@@ -1,0 +1,67 @@
+marymodule
+80
+80
+90
+2
+3
+60.0000   john
+62.2222   mary
+Module: main
+tst8: 40 = foobar
+tst8: 40 = marymodule
+tst9: 30 = foobar
+tst9: 30 = marymodule
+tst10: foobar
+tst10: main
+tst11: a = foobar
+tst11: c = marymodule
+tst11: a = main
+tst12: f + b = foobar + foobar
+tst12: f + a = main + foobar
+tst12: f + b = foobar + main
+tst12: f + a = main + main
+tst13: f + b = foobar
+tst13: f + a = main
+tst14: c = main
+tst14: h = foobar
+tst14: foobar + marymodule
+tst15: done
+tst16: 1 + mmm
+tst17: ${yyy(1)@mmm} + mmm
+tst18: ${yyy(1)@mmm}
+tst19: ${1@mmm}
+tst20: ${1@mmm}
+tst21: done
+80
+80
+90
+2
+3
+60.0000   john
+62.2222   mary
+Module: main
+tst8: 40 = foobar
+tst8: 40 = marymodule
+tst9: 30 = foobar
+tst9: 30 = marymodule
+tst10: foobar
+tst10: main
+tst11: a = foobar
+tst11: c = marymodule
+tst11: a = main
+tst12: f + b = foobar + foobar
+tst12: f + a = main + foobar
+tst12: f + b = foobar + main
+tst12: f + a = main + main
+tst13: f + b = foobar
+tst13: f + a = main
+tst14: c = main
+tst14: h = foobar
+tst14: foobar + marymodule
+tst15: done
+tst16: 1 + mmm
+tst17: ${yyy(1)@mmm} + mmm
+tst18: ${yyy(1)@mmm}
+tst19: ${1@mmm}
+tst20: ${1@mmm}
+tst21: done

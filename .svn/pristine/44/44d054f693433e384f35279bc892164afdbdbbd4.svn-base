@@ -1,0 +1,37 @@
+
+?- setsemantics{class_expressions=on}.
+
+
+{1,2}:foo, {2,3}:moo.
+
+%tst1 :- ?^^foo = 4, writeln(test1=failed)@\plg.
+%tst1 :- ?^^foo = 1, writeln(test1=ok)@\plg.
+
+%tst2 :- ?X^^foo = ?^^moo, ?X=3, writeln(test2=fail)@\plg.
+%tst2 :- ?X^^foo = ?^^moo, ?X=2, writeln(test2=ok)@\plg.
+
+%tst3 :- ?^^(foo-moo) = 2, writeln(test3=fail)@\plg.
+%tst3 :- ?^^(foo-moo) = 1, writeln(test3=ok)@\plg.
+
+%tst4 :- ?^^foo = "aaa"^^foo,  writeln(test4=ok)@\plg.
+
+%tst5 :- ?^^((foo-moo);(moo-foo)) = 2, writeln(test5=fail)@\plg.
+%tst5 :- ?^^((foo-moo);(moo-foo)) = 3, writeln(test5=ok)@\plg.
+
+%tst6 :- ?X^^\real=?, ?X^^\short=1, writeln(test6=fail)@\plg.
+%tst6 :- {1,2,-3}:{\integer,\short,\long},
+	 {1.2,3.4}:{\real,\float,\double},
+	 [a,3] = ?X^^\list,
+	 ?X:\list,
+	 "abc"^^\charlist=?Y,
+	 ?Y:\charlist,
+	 writeln(test6=ok)@\plg.
+
+%pretest :- %tst1, %tst2, %tst3, %tst4, %tst5, %tst6.
+
+%test :- tell(temp)@\plg(),
+	Method[mustDefine(on)]@\sys,
+	%pretest,
+	Method[mustDefine(off)]@\sys,
+	%pretest,
+	told@\plg.

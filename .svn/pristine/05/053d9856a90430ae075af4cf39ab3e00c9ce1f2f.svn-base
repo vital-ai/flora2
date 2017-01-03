@@ -1,0 +1,26 @@
+
+?- ['gpmanager/gpmanager' >> gpm],
+	['gpmanager/students' >> people],
+	['gpmanager/temporal' >> temporal], 
+	['gpmanager/courses' >> courses].
+
+%tst1 :- student[%print_ta_list_full(fall(2003))]@gpm.
+%tst2 :- student[%printallLNfull(fall(2006))]@gpm.
+%tst3 :- %print_tuition_roster(fall(2003))@gpm.
+%tst4 :- student[%print_ta_appointments(fall(2002))]@gpm.
+%tst5 :- %print_new_ta_emails(fall(2000))@gpm.
+%tst6 :- phd[%printnewLNfull(spring(2004))]@gpm.
+%tst7 :- ms[%print_graduation_list(spring(2003),fall(2003))]@gpm.
+%tst8 :- %print_delinquent_RPE(fall(2002))@gpm.
+%tst9 :- %print_late_prelim(fall(2004))@gpm.
+
+%pretest :-
+	%tst1, %tst2, %tst3, %tst4, %tst5, %tst6, %tst7, %tst8, %tst9.
+
+%test :- tell(temp)@\plg(),
+	Method[mustDefine(on)]@\sys,
+	%pretest,
+	Method[mustDefine(off)]@\sys,
+	%pretest,
+	told@\plg().
+

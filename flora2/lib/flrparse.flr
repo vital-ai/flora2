@@ -1,0 +1,88 @@
+/* File:      flrparse.flr
+**
+** Author(s): Michael Kifer
+**
+** Contact:   flora-users@lists.sourceforge.net
+**
+** Copyright (C) by
+**      The Research Foundation of the State University of New York, 1999-2013.
+**
+** Licensed under the Apache License, Version 2.0 (the "License");
+** you may not use this file except in compliance with the License.
+** You may obtain a copy of the License at
+**
+**      http://www.apache.org/licenses/LICENSE-2.0
+**
+** Unless required by applicable law or agreed to in writing, software
+** distributed under the License is distributed on an "AS IS" BASIS,
+** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+** See the License for the specific language governing permissions and
+** limitations under the License.
+**
+**
+*/
+
+
+:- nontabled_module.
+:- suppress_rule_signatures.
+
+:- export{
+        read(?,?),
+	readAll(?,?),
+	?[readAll(?)]}.
+/*
+    Reads a term from std input, parses, compiles, and builds it.
+    Term can also be a reification.
+    Molecules or rules not allowed unless represented as reified terms.
+    Always succeeds (unless there is a bug).
+
+    Code: the code of the term read. 
+          If the thing read is not a term then Code is left unbound
+    Status: [OutcomeFlag, EOF_flag|ErrorList]
+            OutcomeFlag = null/or/error
+	       null  - a blank line was read, no code generated 
+	              (Code will remain unbound)
+	       ok    - good code was generated, no errors
+	       error - parsing/compilation errors
+	    EOF_flag = eof/not_eof
+               not_eof -  end-of-file has not been reached
+	       eof     -  if it has been reached. 
+            ErrorList - if OutcomeFlag=null/ok, then this list would be empty.
+                        if OutcomeFlag=error, then this would be a list of the
+			form [error(N1,N2,Message), ...]
+			N1, N2 encode the line and character number, which is
+			largely irrelevant in this context. Message is an error
+			message that explains the problem. Error messages are 
+			also printed to stderr.
+*/
+read(?Code,?Stat) :-
+	flora_read_parse_compile_build_term(?Code,?,?Stat)@\prolog(flrutils).
+
+/*
+   Used for reading terms one-by-one and returning answers interactively. 
+   Under one-at-a-time solution (\one), will wait for input, return parsed code,
+   then wait for input again, if the user types ";". If the user types
+   RET then succeeds and exits.
+   Under all-solutions semantics (\all), will wait for inputs and process them,
+   but will not return answers unless the file is closed (e.g., Ctl-D at
+   standard input).
+*/
+readAll(?Code,?Stat) :-
+	flora_read_parse_compile_build_loop(?Code,?,?Stat)@\prolog(flrutils).
+
+/*
+   Collects all answers from the source (string(Str) or file(FileName)
+   and returns them in a list, CodeList, of the form code(TermCode,Status).
+   TermCode is the compiled code of a term in ?Source, and ?Status is the
+   status of the compilation for this term.
+*/
+?Source[readAll(?CodeList)] :-
+	?Source = string(?Str),
+	!,
+	?PlgSrc = atom(?Str)@\prolog,
+	flora_read_parse_compile_build_term_list(?PlgSrc,?CodeList,?)@\prolog(flrutils),
+	!.
+?Source[readAll(?CodeList)] :-
+	p2h{?PlgSrc,?Source},
+	flora_read_parse_compile_build_term_list(?PlgSrc,?CodeList,?)@\prolog(flrutils),
+	!.
