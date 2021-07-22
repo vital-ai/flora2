@@ -1,0 +1,10 @@
+
+The release 2.1 (Punica granatum) of Flora-2 fixes many bugs and adds new
+features. This release includes self-contained Windows, Mac, and Linux
+installers.
+
+The installer flora2.run is for the users of Linux/Mac/Other Unixes.
+The installer flora2.exe is for Windows users.
+
+Details of the changes can be found in the release notes at http://flora.sourceforge.net/release_notes.html
+The installation instructions are simple and are available at http://flora.sourceforge.net/installation.html

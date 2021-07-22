@@ -1,0 +1,115 @@
+
+I struggled more with the hilog udf code, and I think the old rewriting is
+completely broken.
+
+First, in
+
+udf ?Z(?X) := ?Y if  pred(?X,?Y,?Z).
+pred(a,b,c).
+p(c(a)) :- body.
+?- p(b).
+
+We create new_udf_pred_?1(?Retval,?Z,?X), but when it comes to p(c(a)) one
+does not know how to
+do variable substitution and this is why p(b) fails. There is simply not
+enough info to do the substitution right, I think. At least, not the way
+we wrote it.
+
+In this case the rule should actually be
+'new_udf_pred_?1'(?Retval,?Z(?X)) :- pred(?X,?Y,?Z).
+
+But, unfortunately, even this will not work, in general. Consider
+
+udf c(?X) := ?Y if  pred222(?X,?Y).
+udf ?Z(?X) := ?Y if  pred(?X,?Y,?Z).
+pred(a,b,c).
+pred222(a,dd).
+p(c(a)) :- body.
+?- p(b).
+
+Here the existing rewriting (in the above problem) takes only the first
+definition, new_udf_pred_c!
+Given that there could be many matching function definitions, as  above,
+one simply cannot use the old scheme. This is why I suggested a universal
+schema before. It is general and simple. Much of the code will be
+simplified this way.
+
+Again, there will be only one predicate,  UDFHILOGPREDICATENAME similar to
+what we have in flrcommin.fli.
+
+It should have these parameters:
+
+UDFHILOGPREDICATENAME(Term,RetValue) :-
+  flrregistry:flora_defined_udf_registry(FLORA_THIS_MODULE_NAME,Term,UDFpred),
+  arg(1,UDFpredicate,RetValue),  %% bind arg 1 in the udf predicate to RetValue
+  machine:call0(UDFpred).
+
+UDFHILOGPREDICATENAME(Term,Term).
+
+Now, each time you have a definition of a UDF, you put the following into
+the registry:
+
+   Module, FunctionTerm, UDFpredicate.
+
+For the above definitions, you do this (where the notation is HiLog):
+
+   Registry:
+      Module, c(X), new_udf_pred_c(Retval,c(X))
+      Module, Z(X), new_udf_pred_?1(RetVal,Z(X))
+   Rules:
+       new_udf_pred_c(RetVal,c(X)) :- Retval = Y, pred222(X,Y).
+       new_udf_pred_?1(Retval,Z(X)) :- Retval=Y, pred(X,Y,Z).
+
+   Rewriting:
+       pred(a,b,c) and pred222(a,dd) remain the as is, since they do not
+       match anything in the udf registry.
+
+       The rule is rewritten like this:
+
+       p(NewVar) :- UDFHILOGPREDICATENAME(c(a),NewVar), body.
+ 
+       the query ?- p(b) is also left as is.
+
+===========================================
+The above does not do higher-order rewriting like the following:
+
+udf ?X(?Y,?Z) := ?R if  pred1(?X,?Y,?Z,?R).
+udf ?X(?Y,?Z)(?W) := ?R if  pred(?X,?Y,?Z,?W,?R).
+pred1(m,n,r,c).
+pred(m,n,r,a,b).
+p(c(a)) :- body.
+
+Query
+?- p(b).
+
+Should be true, as ?X(?Y,?Z) should transform into c. Then c(?W) into c(a)
+and finally c(a) into b.
+
+'c' cannot be unified with ?X(?Y,?Z). Furthermore, even if we rewrite the
+code as follows:
+
+'new_udf_predicate_?1(?2,?3)'(?RetVal,?X(?Y,?Z)):-pred1(?X,?Y,?Z,?R),?RetVal=?R.
+
+'new_udf_predicate_?1(?2,?3)(?4)'(?RetVal,?X(?Y,?Z)(?W)):-pred1(?X,?Y,?Z,?W,?R),
+							  ?RetVal=?R.
+
+Registry:
+ Module, ?X(?Y,?Z),        'new_udf_predicate_?1(?2,?3)'(?RetVal,?X(?Y,?Z))
+ Module, ?X(?Y,Z?)(?W), 'new_udf_predicate_?1(?2,?3)(?4)'(?RetVal,?X(?Y,?Z)(?W))
+
+p(NewVar) :- UDFHILOGPREDICATENAME(c(a),?NewVar), body.
+
+p(b) will still be false.
+
+To fix this problem, we should do rewriting for all subterms:
+
+
+p(NewVar) :- UDFHILOGPREDICATENAME(?c,Newvar1),
+             UDFHILOGPREDICATENAME(Newvar2(a),NewVar),
+	     ?c = c,
+	     body.
+
+However, this would be very inefficient, since we would have to do rewriting
+regardless of whether there is a matching function and query
+UDFHILOGPREDICATENAME/2 in all cases. So, we decided to not do higher-order
+rewriting.

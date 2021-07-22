@@ -1,0 +1,147 @@
+
+\documentclass[11pt]{report}
+\usepackage{makeidx}
+\usepackage{url}
+\usepackage{a4wide}
+\usepackage{longtable}
+\usepackage{color}
+\usepackage{alltt,xspace}
+\usepackage[colorlinks]{hyperref}
+\usepackage{subfigure,graphicx,epsfig,epsf,amsmath,amsfonts,float}
+\usepackage{fancyheadings}
+\usepackage{datetime}
+\usepackage{relsize}
+\usepackage{etoolbox} %% support for conditional compilation
+
+
+\parskip5pt
+\parindent0pt
+\sloppy 
+%%\newcommand{\FLORA}{{\mbox{\sc ${\cal F}${lora}\rm\emph{-2}}}\xspace}
+\newcommand{\FLORA}{{\mbox{\smaller{\sc ${\cal F}${lora}\rm\emph{-2}}}}\xspace}
+\newcommand{\ERGO}{\mbox{\smaller{\ensuremath{\cal{E}}\smaller{{\sc{RGO}}}}}\xspace}
+\newcommand{\ERGOAI}{\mbox{\smaller{\ensuremath{\cal{E}}\smaller{{\sc{RGO}}}\ensuremath{\cal{AI}}}}\xspace}
+\newcommand{\ERGOLITE}{\mbox{\smaller{\ensuremath{\cal{E}}\smaller{{\sc{RGO}\ensuremath{^{Lite}}}}}}\xspace}
+%%\newcommand{\ERGO}{\ensuremath{\cal{E}\mbox{\smaller{\sc{RGO}}}}\xspace}
+%%\newcommand{\ERGO}{\ensuremath{\cal{E}\mbox{\smaller{{\sc{RGO}}}}}\xspace}
+%%\newcommand{\ERGOAI}{\ensuremath{\cal{E}\mbox{\smaller{{\sc{RGO}}}}\!\cal{AI}}\xspace}
+%%\newcommand{\ERGOLITE}{\ensuremath{\cal{E}\mbox{\smaller{\sc{RGO}\ensuremath{^{Lite}}}}}\xspace}
+\newcommand{\FLSYSTEM}{\FLORA}
+\newcommand{\FLRCFILE}{\texttt{FLORA\_RC\_FILE}\xspace}
+\newcommand{\FLABORT}{FLORA\_ABORT}
+\newcommand{\flabort}{'\_\$flora\_abort'}
+\newcommand{\FLUSERABORT}{FLORA\_USER\_ABORT}
+\newcommand{\FLUNDEFEXCEPTION}{FLORA\_UNDEFINED\_EXCEPTION}
+\newcommand{\FLDBEXCEPTION}{FLORA\_DB\_EXCEPTION}
+\newcommand{\flundefexception}{'\_\$flora\_undefined'}
+\newcommand{\fldbexception}{'\_\$flora\_db\_error'}
+\newcommand{\FLPREFIX}{\_\$\_\$\_flora}
+
+\newcommand{\FLSHELL}{flora\_shell}
+\newcommand{\FLBOOTSTRAP}{bootstrap\_flora}
+\newcommand{\FLQUERYCMD}{flora\_query}
+
+\newcommand{\FLORAMODE}{flora-mode}
+\newcommand{\FLORAFILE}{flora.elc}
+\newcommand{\FLORAFILEBASE}{flora}
+
+\newcommand{\ENGINENAME}{flora2}
+\newcommand{\ENGINENAMEALT}{flora2}
+\newcommand{\ENGINERUN}{runflora}
+
+\newcommand{\prompt}{flora2 ?- }
+\newcommand{\errorsystem}{Flora-2}
+\newcommand{\floraname}{Flora-2}
+\newcommand{\flrext}{flr}
+\newcommand{\flrextemacs}{"\bs{}\bs{}.flr\$"}
+
+\IfFileExists{../ergoisms/ergo.switch}{\input{./ergoisms/definitions}}{\newcommand{\isfloraman}{yes}}
+
+\newcommand{\fl}{F-logic }
+
+\newcommand{\fd}{{\mbox{\tt \,->\,}}}                   % scalar
+\newcommand{\mvd}{{\mbox{\tt \,->\,}}}  % multivalued
+\newcommand{\Fd}{{\mbox{\tt \,=>\,}}}                      % scalar signature
+\newcommand{\Mvd}{{\mbox{\tt \,=>\,}}}  % multivalued signature
+\newcommand{\thismodule}{{\tt \_@}\xspace}
+\newcommand{\bs}{{\ensuremath\backslash}}
+
+\def\Protege{Prot\'{e}g\'{e} }
+\def\NoProtege{Prot\'{e}g\'{e}}
+
+\ifdef{\isfloraman}{
+  \title{\bf A Guide to \FLSYSTEM Packages
+    \vspace{0.7cm}\\
+    \includegraphics[width=1in]{floralogo} 
+    \vspace{3mm}\\
+    {\Large Version 2.0}
+    \\
+    {\large (Pyrus nivalis)}
+    \vspace{0.9in}
+\begin{center}
+  \large\textnormal{
+  \monthname ~\the\year
+  }
+\end{center}
+  }
+}
+{
+  \input{./ergoisms/pkg-title}
+}
+
+\date{}
+
+\makeindex 
+\begin{document}
+
+\pagenumbering{Alph}
+\maketitle
+
+
+\thispagestyle{empty}
+\bibliographystyle{plain}
+%%\newpage
+%%\thispagestyle{empty}
+
+\pagenumbering{roman}
+\setcounter{page}{1}
+\tableofcontents
+\newpage        % Just to avoid a silly LaTeX bug with \pagenumbering
+  
+\pagenumbering{arabic}
+
+\input{pkg-java-flora}
+\ifdef{\isfloraman}
+{
+  \input{./pkg-flora-C}
+}
+{
+  \input{./ergoisms/pkg-ergo2java}
+  \input{./ergoisms/pkg-ergo-python}
+  \input{./pkg-flora-C}
+  \input{./ergoisms/pkg-http}
+  \input{./ergoisms/pkg-ergo-sql}
+  \input{./ergoisms/pkg-ergo-sparql}
+  \input{./ergoisms/pkg-ergo-owl}
+  \input{./ergoisms/pkg-ergo-ep}
+  \input{./ergoisms/pkg-ergo-csv}
+  \input{./ergoisms/pkg-ergo-json}
+}
+\input{pkg-flora-persistence}
+\input{pkg-flora-xml}
+\ifdef{\isfloraman}{}
+{
+  \input{./ergoisms/pkg-minizinc}
+}
+%%\input{pkg-flora-protege}
+%%\input{pkg-flora-prettyprint}
+
+
+\newpage
+
+\bibliography{flora2-manual}
+
+%%\printindex
+
+
+\end{document}

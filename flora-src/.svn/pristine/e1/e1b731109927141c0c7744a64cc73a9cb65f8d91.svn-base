@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Flora-2 Engine
+Terminal=true
+Comment=Flora-2/ErgoLite Engine
+Type=Application
+Exec=FLORA2_BASE_FOLDER/flora2/runflora
+Icon=FLORA2_BASE_FOLDER/flora2/etc/flora-desktop.png
+Categories=Application

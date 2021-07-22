@@ -1,0 +1,41 @@
+/* File:      version.flh  -- The Flora-2 version information
+**
+** Author(s): Michael Kifer
+**
+** Contact:   flora-users@lists.sourceforge.net
+**
+** Copyright (C) by
+**      The Research Foundation of the State University of New York, 2004-2018;
+**      and Vulcan, Inc., 2008-2013.
+**
+** Licensed under the Apache License, Version 2.0 (the "License");
+** you may not use this file except in compliance with the License.
+** You may obtain a copy of the License at
+**
+**      http://www.apache.org/licenses/LICENSE-2.0
+**
+** Unless required by applicable law or agreed to in writing, software
+** distributed under the License is distributed on an "AS IS" BASIS,
+** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+** See the License for the specific language governing permissions and
+** limitations under the License.
+**
+*/
+
+%% execute 
+%% svn propset svn:keywords "Date Revision"  version.flh
+%% to enable keyword substitution
+
+
+#if exists("ergoisms/version.flh")  && exists("ergoisms/ergo.switch")
+#include "ergoisms/version.flh"
+#else
+#define FLORA_VERSION   '2.1-RC1'
+#define FLORA_NAME      'Punica granatum'
+
+%% DO NOT TOUCH THIS!!!
+#define FLORA_BUILD     'Revision: 1312'
+
+%% DO NOT TOUCH THIS!!!
+#define FLORA_DATE      'Date: 2020-12-31 21:57:33'
+#endif

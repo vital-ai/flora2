@@ -1,0 +1,5 @@
+
+++Abort[Flora-2]> a rule with Id (aaa,dynrule(descriptors_errfile.flr),main) already exists:
+		 likely in file /home/kifer/FLORA/flora-git-svn/flora2-testsuite/general_tests/descriptors_errfile.flr
+
+

@@ -1,0 +1,28 @@
+
+    Emacs major mode for Flora and Ergo
+    ===================================
+
+Put flora.elc (ergo.elc, in case of Ergo) in a directory that is on the
+load path of Emacs.
+The easiest way is to have a separate directory for emacs libraries.
+A directory can be added to emacs search path by putting the following in
+the file ~/.emacs:
+
+(setq load-path (cons "your-directory" load-path))
+
+Next tell Emacs which files are Flora-2 or Ergo files, so it would
+invoke the appropriate major mode automatically:
+
+For Flora2:
+
+   (setq auto-mode-alist (cons '("\\.flr$" . flora-mode) auto-mode-alist))
+   (autoload
+       'flora-mode "flora" "Major mode for editing Flora-2 knowledge bases." t)
+
+
+For Ergo:
+
+   (setq auto-mode-alist
+       (cons '("\\(\\.flr$\\|\\.ergo$\\|\\.ergotxt$\\)" . ergo-mode)
+             auto-mode-alist))
+   (autoload 'ergo-mode "ergo" "Major mode for editing Ergo knowledge bases." t)
