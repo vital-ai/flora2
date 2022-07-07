@@ -160,6 +160,9 @@
 	conjunct_code/2
    from flrauxil.
 
+:- import show_rule_signature/13 from flrcanon.
+:- import flora_decode_rulehead_or_udf_head_as_atom/3 from flrdecode.
+
 
 /***********************************************************************
  FLLIBNEWMODULE(+ThisModuleName,+Module)
@@ -864,11 +867,16 @@ flora_assert_metafact_list([H|T],FileName,Module) :-
             ; ShortFName = RFN
             ),
             (flora_user_load_registry(LikelyPrevFile,Module,ShortFName,_) ->
-                PrevFilenameMsg = ':\n\t\t likely in file '
+                PrevFilenameMsg = ':\n\t       likely in the file '
             ; PrevFilenameMsg = '', LikelyPrevFile = ''
             ),
             flora_decode_oid_as_atom(RuleId,RuleIdAtm),
-	    flora_abort(['a rule with Id (',
+            show_rule_signature(RuleId,RFN,_,_,Module,_,HeadR,_Bdy,_,_,_,_,_),
+            flora_decode_rulehead_or_udf_head_as_atom(HeadR,AtomHR,HeadR_type),
+            (HeadR_type==udf -> Preamble = 'a UDF '
+            ; Preamble = 'a rule '
+            ),
+	    flora_abort([Preamble, AtomHR, '\n\t       with Id (',
 			 RuleIdAtm,',',RFN,',',Module,
 			 ') already exists',
                          PrevFilenameMsg, LikelyPrevFile],
@@ -877,6 +885,7 @@ flora_assert_metafact_list([H|T],FileName,Module) :-
 	    flora_adaptive_assert(HH),
 	    flora_assert_metafact_list(T,FileName,Module)
 	).
+
 
 %% we assume that the rule enabler is always first in the prebody
 bind_rule_enabler((Enabler,_),File,Module) :-

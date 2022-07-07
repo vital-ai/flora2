@@ -1465,15 +1465,22 @@ modularized_file_name(InFileName, ModularFileName,Module) :-
 %% standard gpp options used by Flora.
 %% Note: @ here is replaced with spaces by gpp.
 %% The first @ is needed to get the non_newline.flr test go through
+/*
+%% for debugging: lets you see .flr file after the gpp preprocessing
+xpp_standard_options_for_compile('-F -m -nostdinc -curdirinclast -includemarker "@'FLORA_GPP_MARKUP'.@'FLORA_GPP_MARKUP'(?,''?'',''?'')."') :-
+        !,
+        parse:set_xppdump_on.
+*/
 xpp_standard_options_for_compile('-F -m -nostdinc -curdirinclast -includemarker "@'FLORA_GPP_MARKUP'.@'FLORA_GPP_MARKUP'(?,''?'',''?'')."').
 /*
-    For prolog compile DO NOT do FLORA_GPP_MARKUP because then every explicit
+    For prolog_compile DO NOT do FLORA_GPP_MARKUP because then every explicit
     load of a modified Prolog program, like ?- ['foo.P'], will insert the
     markups and result in multiple warnings like 
     ++Warning[XSB]: [Compiler] .../foo : Unused symbol .../flora_terms.flh/0
     if "flora_terms.flh" or some other file is #included by foo.P
+
+%%xpp_standard_options_for_prolog_compile('-P -m -nostdinc -curdirinclast -includemarker "@'FLORA_GPP_MARKUP'.@'FLORA_GPP_MARKUP'(?,''?'',''?'')."') :- !.
 */
-%%xpp_standard_options_for_prolog_compile('-P -m -nostdinc -curdirinclast -includemarker "@'FLORA_GPP_MARKUP'.@'FLORA_GPP_MARKUP'(?,''?'',''?'')."').
 xpp_standard_options_for_prolog_compile('-P -m -nostdinc -curdirinclast').
 xpp_standard_options_for_dump('-F -m -nostdinc -curdirinclast').
 xpp_standard_options_for_read('-P -m -nostdinc -curdirinclast').
@@ -5427,6 +5434,8 @@ util_save_tabled_udf_predicates(File,UDFPreds,ok) :-
 write_tabled_udf_predicates(T) :- var(T), !.
 
 write_tabled_udf_predicates([(PredName,PredArity),UDFPreds]):-
+        flora_write_atom('%% FLORA_UDF_DYNAMIC_TABLING is UNused,\n'),
+        flora_write_atom('%% as dynamic+tabled is UNimplemented in XSB\n'),
         flora_write_atom('#if defined(FLORA_UDF_DYNAMIC_TABLING)'),
         nl,
         %% in case PredName has single quotes in it
@@ -6149,6 +6158,7 @@ flora_system_info(Key=Value) :-
         flora_file_op(cwd,CurrentDir),
         flora_get_user(User),
         xsb_configuration(architecture,Arch),
+        xsb_configuration(host_cpu,Cpu),
         xsb_configuration(config_dir,ArchDir),
         xsb_configuration(config_bindir,BinDir),
         xsb_configuration(install_dir,XSB_installdir),
@@ -6168,6 +6178,8 @@ flora_system_info(Key=Value) :-
         ; Key = codename, Value = Codename
         ; Key == system -> Value=System
         ; Key = system, Value=System
+        ; Key == host_cpu -> Value = Cpu
+        ; Key = host_cpu, Value = Cpu
         ; Key == architecture -> Value = Arch
         ; Key = architecture, Value = Arch
         ; Key == archdir -> Value = ArchDir

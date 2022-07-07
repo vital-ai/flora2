@@ -1,5 +1,6 @@
 
-++Abort[Ergo]> a rule with Id (aaa,dynrule(descriptors_errfile.flr),main) already exists:
-		 likely in file /home/kifer/FLORA/flora-git/flora2-testsuite/general_tests/descriptors_errfile.flr
+++Abort[Ergo]> a rule testhead :- ..
+	       with Id (aaa,dynrule(descriptors_errfile.flr),main) already exists:
+	       likely in the file /home/kifer/FLORA/flora-git/flora2-testsuite/general_tests/descriptors_errfile.flr
 
 

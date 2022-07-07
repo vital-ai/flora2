@@ -178,8 +178,8 @@ fllibshellans(Gs,NVs) :-
 	fail.
 
 flora_end_of_answer_handler :-
-        flora_clear_nested_timeouts,
-	flora_reclaim_storage_space.
+        flora_clear_nested_timeouts.
+%%	flora_reclaim_storage_space.
 
 flranswer_abolish_handler(P/N) :-
         functor(Pred,P,N),

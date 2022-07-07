@@ -52,6 +52,8 @@
            ?[isTypeOf(?)],
            ?[lessThan(?)],
            ?[lessEq(?)],
+           ?[gt(?)],
+           ?[gtEq(?)],
            ?[add(?) -> ?],
            ?[inverse -> ?],
            // non-strict convert to type: fail for args of wrong types
@@ -419,6 +421,9 @@ next(?period,?X,?Y,?Increment) :-
         dtype_isa(?N2,FL_IRI)@\prolog(flrdtype_sub),
         !,
         ?N.rawValue @=< ?N2.rawValue.
+
+?X[gt(?Y)] :- ?Y[lessThan(?X)].
+?X[gtEq(?Y)] :- ?Y[lessEq(?X)].
 
 ?D[rawValue->?V] :- flora_datatype_raw_value(?D,?V)@\prolog(flrdatatype), !.
 ?D[typeName->?V] :- flora_datatype_name(?D,?V)@\prolog(flrdatatype), !.

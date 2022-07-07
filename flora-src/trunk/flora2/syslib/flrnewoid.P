@@ -36,9 +36,13 @@
         FLLIBNEWOID/2,
         FLLIBSKOLEM/1,
         FL_SKOLEMQUERY/1,
+        flora_skolemize_term/2,
+        flora_presentable_skolem/2,
         FL_ISSKOLEM/1.
 :- import gensym/2 from gensym.
 :- import
+        flora_concat_atoms/2,
+        flora_get_substring/4,
 	flora_match_substring/5
    from flrporting.
 
@@ -89,3 +93,25 @@ FL_SKOLEMQUERY(Term) :-
 	arg(1,Term,F),
 	!,
 	FL_SKOLEMQUERY(F).
+
+flora_skolemize_term(Term,TermC) :-
+        copy_term(Term,TermC),
+        flrauxil:flora_term_variables(TermC,Vars),
+        bind_vars_to_skolems(Vars).
+
+bind_vars_to_skolems([]) :- !.
+bind_vars_to_skolems([V|Vars]) :-
+        FLLIBNEWOID(Sk),
+        (var(V) -> V=Sk ; true),
+        bind_vars_to_skolems(Vars).
+
+flora_presentable_skolem(Id, Presentable) :-
+	atom(Id),
+	!,
+	(
+	  flora_match_substring(FL_NEWOID_PREFIX,Id,forward,0,Pos),
+	  !
+	; flora_match_substring(FL_NEWOID_DYNPREFIX,Id,forward,0,Pos)
+	),
+        flora_get_substring(Id,Pos,-1,Suff),
+        flora_concat_atoms([obj,Suff],Presentable).

@@ -52,43 +52,45 @@
           source .flr files will be recompiled on the first use.
 */
 
+#define OTHER_TABLING_OPTIONS  ,if_not_tabled
+
 #include ".flora_default_tabling"
 
 #if defined(FLORA_SUBSUMPTIVE_TABLING) && (!defined(FLORA_NONINCREMENTAL_TABLING) || defined(FLORA_INCREMENTAL_TABLING))
 
 /* Subsumptive tabling yields big speedups and improves termination */
-#define MOLECULE_TABLING_TYPE   ','(subsumptive,incremental)
-#define HILOG_TABLING_TYPE      ','(subsumptive,incremental)
-#define ISA_TABLING_TYPE	','(subsumptive,incremental)
-#define EQUALITY_TABLING_TYPE   ','(subsumptive,incremental)
+#define MOLECULE_TABLING_TYPE   (subsumptive,incremental OTHER_TABLING_OPTIONS)
+#define HILOG_TABLING_TYPE      (subsumptive,incremental OTHER_TABLING_OPTIONS)
+#define ISA_TABLING_TYPE	(subsumptive,incremental OTHER_TABLING_OPTIONS)
+#define EQUALITY_TABLING_TYPE   (subsumptive,incremental OTHER_TABLING_OPTIONS)
 /* AUXILIARY_TABLING_TYPE doesn't need to be subsumptive */
-#define AUXILIARY_TABLING_TYPE  ','(variant,incremental)
+#define AUXILIARY_TABLING_TYPE  (variant,incremental OTHER_TABLING_OPTIONS)
 
 #endif
 
 #if !defined(FLORA_SUBSUMPTIVE_TABLING) && (!defined(FLORA_NONINCREMENTAL_TABLING) || defined(FLORA_INCREMENTAL_TABLING))
 
-#define MOLECULE_TABLING_TYPE   ','(variant,incremental)
-#define HILOG_TABLING_TYPE      ','(variant,incremental)
-#define ISA_TABLING_TYPE	','(variant,incremental)
-#define EQUALITY_TABLING_TYPE   ','(variant,incremental)
-#define AUXILIARY_TABLING_TYPE  ','(variant,incremental)
+#define MOLECULE_TABLING_TYPE   (variant,incremental OTHER_TABLING_OPTIONS)
+#define HILOG_TABLING_TYPE      (variant,incremental OTHER_TABLING_OPTIONS)
+#define ISA_TABLING_TYPE	(variant,incremental OTHER_TABLING_OPTIONS)
+#define EQUALITY_TABLING_TYPE   (variant,incremental OTHER_TABLING_OPTIONS)
+#define AUXILIARY_TABLING_TYPE  (variant,incremental OTHER_TABLING_OPTIONS)
 
 #endif
 
 #if defined(FLORA_SUBSUMPTIVE_TABLING) && defined(FLORA_NONINCREMENTAL_TABLING) && !defined(FLORA_INCREMENTAL_TABLING)
 
-#define MOLECULE_TABLING_TYPE   (subsumptive)
-#define HILOG_TABLING_TYPE      (subsumptive)
-#define ISA_TABLING_TYPE	(subsumptive)
-#define EQUALITY_TABLING_TYPE   (subsumptive)
-#define AUXILIARY_TABLING_TYPE  (subsumptive)
+#define MOLECULE_TABLING_TYPE   (subsumptiv OTHER_TABLING_OPTIONSe)
+#define HILOG_TABLING_TYPE      (subsumptive OTHER_TABLING_OPTIONS)
+#define ISA_TABLING_TYPE	(subsumptive OTHER_TABLING_OPTIONS)
+#define EQUALITY_TABLING_TYPE   (subsumptive OTHER_TABLING_OPTIONS)
+#define AUXILIARY_TABLING_TYPE  (subsumptive OTHER_TABLING_OPTIONS)
 /*  Should start using the below when subsumptive+incremental works
-#define MOLECULE_TABLING_TYPE   ','(subsumptive,opaque)
-#define HILOG_TABLING_TYPE      ','(subsumptive,opaque)
-#define ISA_TABLING_TYPE	','(subsumptive,opaque)
-#define EQUALITY_TABLING_TYPE   ','(subsumptive,opaque)
-#define AUXILIARY_TABLING_TYPE  ','(subsumptive,opaque)
+#define MOLECULE_TABLING_TYPE   (subsumptive,opaque OTHER_TABLING_OPTIONS)
+#define HILOG_TABLING_TYPE      (subsumptive,opaque OTHER_TABLING_OPTIONS)
+#define ISA_TABLING_TYPE	(subsumptive,opaque OTHER_TABLING_OPTIONS)
+#define EQUALITY_TABLING_TYPE   (subsumptive,opaque OTHER_TABLING_OPTIONS)
+#define AUXILIARY_TABLING_TYPE  (subsumptive,opaque OTHER_TABLING_OPTIONS)
 */
 
 #endif
@@ -96,11 +98,11 @@
 #if !defined(FLORA_SUBSUMPTIVE_TABLING) && defined(FLORA_NONINCREMENTAL_TABLING) && !defined(FLORA_INCREMENTAL_TABLING)
 
 /* Use variant tabling */
-#define MOLECULE_TABLING_TYPE   ','(variant,opaque)
-#define HILOG_TABLING_TYPE      ','(variant,opaque)
-#define ISA_TABLING_TYPE	','(variant,opaque)
-#define EQUALITY_TABLING_TYPE   ','(variant,opaque)
-#define AUXILIARY_TABLING_TYPE  ','(variant,opaque)
+#define MOLECULE_TABLING_TYPE   (variant,opaque OTHER_TABLING_OPTIONS)
+#define HILOG_TABLING_TYPE      (variant,opaque OTHER_TABLING_OPTIONS)
+#define ISA_TABLING_TYPE	(variant,opaque OTHER_TABLING_OPTIONS)
+#define EQUALITY_TABLING_TYPE   (variant,opaque OTHER_TABLING_OPTIONS)
+#define AUXILIARY_TABLING_TYPE  (variant,opaque OTHER_TABLING_OPTIONS)
 
 #endif
 

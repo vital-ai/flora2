@@ -175,7 +175,8 @@ flora_backtrace(off) :- flora_disable_backtrace.
 
 %% flora_shell_loop_message/3
 %% Message: a string or abort(string)
-flora_shell_loop_message(error(existence_error(module,Module),context(_,Trace)),
+%%flora_shell_loop_message(Error, _Message, _Trace) :- write_canonical(2,Error), nl(2), fail.
+flora_shell_loop_message(error(existence_error(module,Module),context(_Ctxt,Trace)),
                          Message,
                          Trace) :-
 	%% throw/1 now closes open tables, so do NOT do it here
@@ -184,9 +185,11 @@ flora_shell_loop_message(error(existence_error(module,Module),context(_,Trace)),
                          'attempt to call a Prolog predicate in a nonloaded module `%S''',
                          arg(Module)).
 
-flora_shell_loop_message(error(existence_error(procedure,Module:PredName/Arity),context(_,Trace)),
+flora_shell_loop_message(error(existence_error(Type,Module:PredName/Arity),context(_,Trace)),
                          Message,
                          Trace) :-
+        (Type == predicate ; Type == procedure),
+        !,
 	%% throw/1 now closes open tables, so do NOT close them here!
 	%%close_open_tables(cleanup),
 	flora_undefined_predicate_msg(PredName,Arity,Module,Message).

@@ -113,6 +113,7 @@
         flora_slash/1,
         flora_running_under/1,
         flora_running_under/2,
+        flora_running_under/4,
         flora_user_home/1,
         flora_install_dir/1,
         flora_user_floradir/1,
@@ -581,6 +582,12 @@ flora_running_under(OSName,Word) :-
 	; OSName = generic_unix
 	).
 
+flora_running_under(OSName,Word,Cpu,CpuType) :-
+        flora_running_under(OSName,Word),
+        xsb_configuration(host_cpu,Cpu),
+        (memberchk(Cpu,[i386,x64,x86_64]) -> CpuType=intel
+        ; CpuType=arm
+        ).
 
 flora_banner_control(X) :- banner_control(X).
 flora_set_banner_control(X,Flag) :- set_banner_control(X,Flag).

@@ -54,6 +54,7 @@
 :- import
 	flora_decode_goal_as_atom_substitute_vars/2,
 	flora_decode_oid_list_as_atom_list_substitute_vars/2,
+	flora_decode_goal_list_as_mainless_atom_list_substitute_vars/2,
 	set_context/1,
 	clear_context/1
    from flrdecode.
@@ -412,9 +413,9 @@ flora_delay_quantifier(File,Line,[FL_MUST,Condition,Goal]) :-
         %% This case is really a warning - used for testing delay quantifiers
 	has_test_mode(delayquant),
 	!,
-	flora_decode_goal_as_atom_substitute_vars(Goal,GoalAtm),
+	%%flora_decode_goal_as_atom_substitute_vars(Goal,GoalAtm),
 	set_context(displaying_delay_quantifier),
-	flora_decode_goal_as_atom_substitute_vars(Condition,CondAtm),
+	flora_decode_goal_list_as_mainless_atom_list_substitute_vars([Goal,Condition],[GoalAtm,CondAtm]),
 	clear_context(displaying_delay_quantifier),
 	flora_error_line('in file ~w, line ~w: unsatisfied must-condition.~n\tGoal: ~w~n\tCondition: ~w',
 			 [File,Line,GoalAtm,CondAtm]).
@@ -427,11 +428,11 @@ flora_delay_quantifier(_File,_Line,[FL_MUST,Condition,Goal]) :-
         !,
         %% replace solve with solve_flex
         ShowGoal =.. [F,solve_flex|RestArgs],
-	flora_decode_goal_as_atom_substitute_vars(ShowGoal,GoalAtm),
+	%%flora_decode_goal_as_atom_substitute_vars(ShowGoal,GoalAtm),
         Condition = (ground(Cond1),ground(Cond2)),
 	set_context(displaying_delay_quantifier),
-	flora_decode_goal_as_atom_substitute_vars(Cond1,CondAtm1),
-	flora_decode_goal_as_atom_substitute_vars(Cond2,CondAtm2),
+	%%flora_decode_goal_as_atom_substitute_vars(Cond1,CondAtm1),
+	flora_decode_goal_list_as_mainless_atom_list_substitute_vars([ShowGoal,Cond1,Cond2],[GoalAtm,CondAtm1,CondAtm2]),
 	clear_context(displaying_delay_quantifier),
         flora_abort(['non-ground in-parameters (Arg 3) or output template (Arg 6) in call to MiniZinc:',
                      '\n\tGoal: ', GoalAtm,
@@ -441,9 +442,9 @@ flora_delay_quantifier(_File,_Line,[FL_MUST,Condition,Goal]) :-
 
 flora_delay_quantifier(File,Line,[FL_MUST,Condition,Goal]) :-
         %% This one is an error case
-	flora_decode_goal_as_atom_substitute_vars(Goal,GoalAtm),
+	%%flora_decode_goal_as_atom_substitute_vars(Goal,GoalAtm),
 	set_context(displaying_delay_quantifier),
-	flora_decode_goal_as_atom_substitute_vars(Condition,CondAtm),
+	flora_decode_goal_list_as_mainless_atom_list_substitute_vars([Goal,Condition],[GoalAtm,CondAtm]),
 	clear_context(displaying_delay_quantifier),
 	flora_abort(['in file ', File, ', line ', Line, ': ',
 		     'unsatisfied must-condition.',

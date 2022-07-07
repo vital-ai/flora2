@@ -107,6 +107,7 @@ version:
 	@(update_version.sh 2> /dev/null && echo "\n*** Ergo/Flora-2 version has been updated.\n") || echo "\n*** WARNING: Not a Git-checked-out copy of Ergo, or Perl is not installed.\n    Not updating Ergo/Flora-2 version.\n"
 
 top: init $(ALLOBJS) finish
+	@echo "Dumping the hashes"
 	@-(test -e cc/ergoact/ergo_hashes.P -a -e ergoisms/.flrlicense.flh && cd cc/ergoact && $(PROLOG) -e "[ergo_hashes],dump_hashes,halt.") || echo ""
 	@-(test -e cc/ergoflt/ergoflt_hashes.P -a -e ergoisms/.flrcloud.flh && cd cc/ergoflt && $(PROLOG) -e "[ergoflt_hashes],dump_hashes,halt.") || echo ""
 	./CompileChangedFiles.sh $(PROLOG_COMMAND)
@@ -122,6 +123,7 @@ core_internal: top
 	cd syslib && $(MAKE) PROLOG=$(PROLOG)
 	cd debugger && $(MAKE) PROLOG=$(PROLOG)
 	@-(test -d ergo_syslib && cd ergo_syslib && $(MAKE) PROLOG=$(PROLOG)) || echo ""
+	@echo "Making ergoact and ergoflt"
 	@-(test -d cc/ergoact && cd cc/ergoact && $(MAKE) PROLOG=$(PROLOG)) || echo ""
 	@-(test -d cc/ergoflt && cd cc/ergoflt && $(MAKE) PROLOG=$(PROLOG)) || echo ""
 

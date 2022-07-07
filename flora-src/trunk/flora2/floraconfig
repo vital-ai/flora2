@@ -12,10 +12,12 @@ if test "$2" != compiling -a ! -f genincludes/flrtable.flh ; then
     exit 1
 fi
 
-if test "$1" = none -o -z "$1" ; then
-   PROLOG=`which xsb`
+if test -n "$1" -a "$1" != none ; then
+    PROLOG="$1"
+elif test -x ../XSB/bin/xsb ; then
+    PROLOG=../XSB/bin/xsb
 else
-   PROLOG="$1"
+    PROLOG=`which xsb`
 fi
 
 if [ -z "$PROLOG" ] ; then

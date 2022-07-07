@@ -96,13 +96,10 @@ if exist *.a     del *.a
 if exist *.o     del *.o
 if exist *.xwam  del *.xwam
 
-REM These compile DLLs
+REM These compile the cc/ergoact/flt DLLs
 if [%1] == [-c64] (
    nmake /nologo /f NMakefile64.mak PROLOG=%PROLOG% PROLOGDIR=%PROLOGDIR%
    if [%thiscommand%] == [makeergo]  (
-      cd json
-      nmake /nologo /f NMakefile64.mak PROLOG=%PROLOG% PROLOGDIR=%PROLOGDIR%
-      cd ..
       cd ergoact
       nmake /nologo /f NMakefile64.mak PROLOG=%PROLOG% PROLOGDIR=%PROLOGDIR%
       cd ..

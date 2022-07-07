@@ -58,6 +58,11 @@
 	get_canonical_form/2 
    from flrcanon.
 
+:- import
+        flora_decode_predicate/6,
+        negate_predicate/2
+   from flrwrapper.
+
 :- import flora_export_registry/4 from flrregistry.
 
 :- dynamic no_predicates_exported_module_cache/2.
@@ -140,7 +145,7 @@ flora_assert_into_export_registry(DynamicModulename,ExportingModule,ModuleExport
 		( flora_export_registry(ExportingModule, ModuleExportedTo, UpdateTag, Term) -> true
 		;
 		    asserta(flora_export_registry(ExportingModule, ModuleExportedTo, UpdateTag, Term)),
-		    flrwrapper:negate_predicate(Term,NegTerm),
+		    negate_predicate(Term,NegTerm),
 		    asserta(flora_export_registry(ExportingModule, ModuleExportedTo, UpdateTag, NegTerm)),
 		    
 		    convert_to_signature(Term,inheritable,SigTerm),
@@ -221,6 +226,7 @@ flora_no_predicates_exported(Module) :-
   flora_check_export_registry(+CallerMod,+ModBeingCalled,+Term,+UpdateTag)
   Called by the flrdb, insert delete, predicates with the Updatable tag.
   If suceeds, update is allowed.
+  flora_check_export_registry/4 should normally succede - unlike /3.
 ****************************************************************************/
 flora_check_export_registry(CallerMod,ModBeingCalled,Term,UpdateTag) :-
 	\+ (\+flora_check_export_registry_internal(CallerMod,ModBeingCalled,Term,UpdateTag)),
@@ -231,6 +237,11 @@ flora_check_export_registry(_CallerMod,_ModBeingCalled,Term,_UpdateTag) :-
 	flora_export_undef_check_protected(Term),
 	!,
 	fail.
+flora_check_export_registry(_CallerMod,_ModBeingCalled,Term,_UpdateTag) :-
+        flora_decode_predicate(Term,_Type,_Mod,_Prefx,_Wrap, [PredName|Args]),
+        always_exported_hidden_system_pred(PredName,Args),
+        !.
+
 %%error handling.
 flora_check_export_registry(_CallerMod,_ModBeingCalled,Term,_UpdateTag) :-
 	flora_error_notexported(Term).
@@ -241,6 +252,7 @@ flora_check_export_registry(_CallerMod,_ModBeingCalled,Term,_UpdateTag) :-
 ** basic idea: if the check succeeds (the predicate is exported),
 ** the call to flora_check_export_registry/3 is failed, so NO error is issued.
 ** Control then proceeds to check other rules for the predicate.
+** flora_check_export_registry/3 must fail unlike flora_check_export_registry/4
 ******************************************************************************/
 flora_check_export_registry(CallerMod,ModBeingCalled,Term) :-
 	flora_check_export_registry_internal(CallerMod,ModBeingCalled,Term,_UpdateTag),
@@ -254,6 +266,11 @@ flora_check_export_registry(_FWContext,_ModBeingCalled,Term) :-
 	flora_export_undef_check_protected(Term),
 	!,
 	fail.
+flora_check_export_registry(_CallerMod,_ModBeingCalled,Term) :-
+        flora_decode_predicate(Term,_Type,_Mod,_Prefx,_Wrap,[PredName|Args]),
+        always_exported_hidden_system_pred(PredName,Args),
+        !,
+        fail.
 flora_check_export_registry(_FWContext,_ModBeingCalled,Term) :-
 	flora_error_notexported(Term).
 
@@ -297,7 +314,7 @@ flora_export_undef_check_protected(Predicate) :-
         Instead, CallerMod is just restricted to the exported methods only.
 *****************************************************************************/
 %% These tables slow down
-%% Also: tabling this has implies that flora_export_registry must be incr_asserted
+%% Also: tabling this implies that flora_export_registry must be incr_asserted
 %%:- table flora_check_export_registry_internal/4 as (variant,opaque).
 %%:- table flora_bind_to_export_registry/3 as (variant,opaque).
 flora_bind_to_export_registry(CallerMod,CalledMod,Call) :-
@@ -305,3 +322,7 @@ flora_bind_to_export_registry(CallerMod,CalledMod,Call) :-
 	; flora_no_predicates_exported(CalledMod) -> true
 	; flora_export_registry(CalledMod,CallerMod,_,Call)
 	).
+
+
+always_exported_hidden_system_pred('\\opaqueJustification',[_,_,_]).
+always_exported_hidden_system_pred('\\trivialJustification',[_,_,_]).

@@ -787,7 +787,7 @@ conjunct_to_list(A, [A]).
 
 
 /******************************************************************************
-  show_rule_signature(?Id,?FileN,?VarsTerm,?Prefix,?Module,-RuleNum,-Head,-Body,-PreBody,-PostBody,-DefeatCond,-Rule)
+  show_rule_signature(?Id,?FileN,?VarsTerm,?Prefix,?Module,-RuleNum,-Head,-Body,-H2BSig,-PreBody,-PostBody,-DefeatCond,-Rule)
 
   show_rule_signature does not do head/body conversion,
   so Head/Body can really be only output vars

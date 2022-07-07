@@ -537,7 +537,8 @@ flora_type_numeric_value(FL_DATATYPE(Literal,_),Val) :-
 	flora_type_numeric_value(Literal,Val),
 	!.
 flora_type_numeric_value(FL_DATETIME(_,_,_,_,_,_,_,_,_,_,Val),Val) :- !.
-flora_type_numeric_value(FL_DURATION(_,_,_,_,_,_,_,Val),Val) :- !.
+flora_type_numeric_value(FL_DURATION(_,_,_,_,_,_,_,Triple),Val) :- !,
+        duration_numeric_value(Triple,Val).
 flora_type_numeric_value(FL_DATE(_,_,_,_,_,_,_,Val),Val) :- !.
 flora_type_numeric_value(FL_TIME(_,_,_,_,_,_,Val),Val) :- !.
 flora_type_numeric_value(FL_CURRENCY(_,_,Val),Val) :- !.
@@ -1110,6 +1111,11 @@ flora_is_nonvar_prim(X) :-
         !,
         nonvar(Val).
 flora_is_nonvar_prim(X) :- nonvar(X).
+
+duration_numeric_value(Triple,Val) :-
+        Triple = (DuHrs,DuMin,DuSecAtm),
+        atom_codes(DuSecAtm,DuSecCodes), number_codes(DuSec,DuSecCodes),
+        Val is (DuHrs*3600+DuMin*60+DuSec).
 
 
 #if exists("ergoisms/datatype_xtras.P") && exists("../ergoisms/ergo.switch")

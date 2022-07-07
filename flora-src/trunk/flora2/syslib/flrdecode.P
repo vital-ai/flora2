@@ -176,6 +176,8 @@
 	flora_display_mode/1,
 	flora_display_symbol/2.
 
+:- export flora_decode_rulehead_or_udf_head_as_atom/3.
+
 :- dynamic display_schema/1, display_mode/1.
 %% place to hold the module of the rule head. used to display rules as
 %% (head :- body)@module
@@ -1000,6 +1002,17 @@ special_prolog_call(Fun,2,[FunResult,FunAppl|_],[FunApplCode,' := ',FunResultCod
         !,
         decode_literal_internal(FunAppl,FunApplCode,1,0).
 
+%%%%%%%%%%%%%%%%%%%%%% flora_decode_rulehead_or_udf_head_as_atom/3 %%%%%%%%%%%%
+%% used for error reporting to show rule head or UDF head
+flora_decode_rulehead_or_udf_head_as_atom(G,GDecoded,udf) :-
+        G =.. [Fun,_FunResult,FunAppl|_],
+        flora_match_substring(NEWUDFPREDICATENAME,Fun,forward,_,_),
+        !,
+        decode_literal_internal(FunAppl,FunApplCode,1,0),
+        flora_concat_items([FL_UDFF, ' ', FunApplCode, ' ', FL_UDFEQ, ' ...'],GDecoded).
+flora_decode_rulehead_or_udf_head_as_atom(G,GDecoded,rule) :-
+	flora_decode_goal_as_mainless_atom_substitute_vars(G,Glist),
+        flora_concat_items([Glist,' :- ..'],GDecoded).
 
 
 
@@ -1332,6 +1345,9 @@ decode_anon_oid(NewOid,Code,Depth) :-
 	    ; flora_display_mode(deepanswer) ->
 		Code = [Symbol, '  (', NewOid, ')']
 	    ; flora_display_mode(debug) -> Code = [NewOid]
+	    ; flora_display_mode(explanation) ->
+                flrnewoid:flora_presentable_skolem(NewOid,NewOid2),
+                Code = [NewOid2]
 	    ;  Code = [Symbol]
 	    )
         ; flora_match_substring('|omni_',NewOid,forward,_,Pos1) ->
@@ -1345,6 +1361,9 @@ decode_anon_oid(NewOid,Code,Depth) :-
 	    ; flora_display_mode(deepanswer) ->
 		Code = [Symbol, OidVar, '  (', NewOid, ')']
 	    ; flora_display_mode(debug) -> Code = [NewOid]
+	    ; flora_display_mode(explanation) ->
+                flrnewoid:flora_presentable_skolem(NewOid,NewOid2),
+                Code = [NewOid2]
 	    ;  Code = [Symbol,OidVar]
 	    )
         ; flora_match_substring('|',NewOid,forward,_,Pos1) ->
@@ -1358,6 +1377,9 @@ decode_anon_oid(NewOid,Code,Depth) :-
 	    ; flora_display_mode(deepanswer) ->
 		Code = [Symbol, OidNumber, '  (', NewOid, ')']
 	    ; flora_display_mode(debug) -> Code = [NewOid]
+	    ; flora_display_mode(explanation) ->
+                flrnewoid:flora_presentable_skolem(NewOid,NewOid2),
+                Code = [NewOid2]
 	    ;  Code = [Symbol,OidNumber]
 	    )
 	;
@@ -1366,6 +1388,9 @@ decode_anon_oid(NewOid,Code,Depth) :-
 	    ; flora_display_mode(deepanswer) ->
 		Code = [Symbol, '  (', NewOid, ')']
 	    ; flora_display_mode(debug) -> Code = [NewOid]
+	    ; flora_display_mode(explanation) ->
+                flrnewoid:flora_presentable_skolem(NewOid,NewOid2),
+                Code = [NewOid2]
 	    ;  Code = [Symbol]
 	    )
 	).
@@ -1956,10 +1981,17 @@ decode_literal_internal(FL_DELAYQUANT(QuantType,Cond,Goal),
 	!,
 	(Level==0 -> ReifyStart='',ReifyEnd='' ; ReifyStart='${',ReifyEnd='}'),
 	Depth1 is Depth+1,
-	set_context(displaying_delay_quantifier),
+        (\+has_context(displaying_delay_quantifier) ->
+            set_context(displaying_delay_quantifier),
+            Must_unset_displaying_delay_quantifier = true
+        ; Must_unset_displaying_delay_quantifier = fail
+        ),
 	decode_literal_internal(Cond,CondCode,0,Depth1),
 	decode_literal_internal(Goal,GoalCode,0,Depth1),
-	clear_context(displaying_delay_quantifier).
+        (Must_unset_displaying_delay_quantifier ->
+            clear_context(displaying_delay_quantifier)
+        ; true
+        ).
 
 %% the next 3 are for justification printing in Ergo
 decode_literal_internal(FLORA_SYMBOL('splice')(Goal), Code, _Level,Depth) :-
@@ -1983,7 +2015,8 @@ decode_literal_internal(FLORA_SYMBOL('and')(Goal1,Goal2),
         decode_literal_internal(Goal1,Code1,Level,Depth),
         decode_literal_internal(Goal2,Code2,Level,Depth).
 
-decode_literal_internal(FLORA_SYMBOL('naf')(Goal), ['it is false that ', Code], Level,Depth) :-
+%%decode_literal_internal(FLORA_SYMBOL('naf')(Goal), ['\\naf (', Code, ' )'], Level,Depth) :-
+decode_literal_internal(FLORA_SYMBOL('naf')(Goal), ['it is false that (', Code, ' )'], Level,Depth) :-
         !,
         decode_literal_internal(Goal,Code,Level,Depth).
 
@@ -2437,6 +2470,7 @@ escape(Atom1,Code) :-
         (Str = [CH_BACKSLASH|RestStr] ->
             escape(RestStr,EscStrSuffix,Flag),
             EscStr = [CH_BACKSLASH|EscStrSuffix]
+        ; Atom == FL_MATHNOTEQ -> EscStr=Str
         ; escape(Str,EscStr,Flag)
         ),
 	atom_codes(NA,EscStr),
@@ -2465,7 +2499,8 @@ escape([H|L],Out,needs_quoting) :-
         ),
         escape(L,EL,_Flag),
         flatten(Out1,Out).
-escape([CH_BACKSLASH,CH_QUOTE|L],[CH_QUOTE,CH_QUOTE|EL],needs_quoting) :-
+escape([CH_BACKSLASH,CH_QUOTE|L],[CH_BACKSLASH,CH_BACKSLASH,CH_QUOTE,CH_QUOTE|EL],needs_quoting) :-
+        %% double \' before output to \\''
 	display_schema_is_ergo_or_flora,
 	!,
 	escape(L,EL,_).
@@ -2497,18 +2532,38 @@ escape([CH_BACKSLASH,H|L],[CH_BACKSLASH,CH_BACKSLASH,H|EL],needs_quoting) :-
         special_character(_,H),
         !,
         escape(L,EL,_Flag).
-escape([CH_BACKSLASH,H|L],[CH_BACKSLASH,CH_BACKSLASH|HEL],needs_quoting) :-
-        special_character(H,_),
-        !,
-        escape([H|L],HEL,_Flag).
 escape([CH_BACKSLASH,CH_BACKSLASH|L],[CH_BACKSLASH,CH_BACKSLASH,CH_BACKSLASH,CH_BACKSLASH|EL],needs_quoting) :-
         !,
         escape(L,EL,_Flag).
+escape([CH_BACKSLASH,H|L],[CH_BACKSLASH|HEL],needs_quoting) :-
+        backslashed_op(Op),
+        flrdatatype_utils:flora_startsWith_list([H|L],Op),
+        !,
+        escape([H|L],HEL,_Flag).
+escape([CH_BACKSLASH,H|L],[CH_BACKSLASH,CH_BACKSLASH|HEL],needs_quoting) :-
+        %%special_character(H,_), %% double \ for output
+        !,
+        escape([H|L],HEL,_Flag).
 escape([H|L],[H|EL],Flag) :-
 	(needs_quoting(H) -> Flag = needs_quoting, NewFlag = _
 	; NewFlag = Flag
 	),
         escape(L,EL,NewFlag).
+
+backslashed_op("is").
+backslashed_op("in").
+backslashed_op("~").
+backslashed_op("=").
+backslashed_op("==").
+backslashed_op("@").
+backslashed_op("+").
+backslashed_op("#").
+%% do not use these, as \t \u are special characters
+%%backslashed_op("if").
+%%backslashed_op("then").
+%%backslashed_op("else").
+%%backslashed_op("do").
+%%backslashed_op("until").
 
 /****************************************************************************
  special_character(+C, -NC)

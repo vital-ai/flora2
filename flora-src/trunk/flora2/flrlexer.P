@@ -35,7 +35,7 @@
 #define FILE_CNT	flora_lexer_file_count
 #define PENDING         0
 
-#define TKCNT           tkcnt           %% defined in composer
+#define TKCNT           tkcnt           %% set in the composer
 
 #include "standard.h"
 
@@ -174,7 +174,7 @@ flora_begin_file(FileName) :-
 /****************************************************************************
   flora_end_file(+LineNumber)
 
-  This is being called from the parser and uses markup facts inserted by GPP
+  This is being called from the parser and uses markup facts inserted by GPP.
   Controls the file stack in the lexer.
   This is how Flora is able to maintain line numbers correctly
   in the presence of included files.
@@ -182,7 +182,7 @@ flora_begin_file(FileName) :-
 flora_end_file(LineNumber) :-
 	flora_increment_counter(CURR_FILE,-1,N,_M),
         retract(flora_file_stack(N,_)),
-        %% the most near file beginning that waiting for an end
+        %% the most file beginning that waiting for an end
         flora_file_last_token(FCnt,PENDING),
         \+((flora_file_last_token(FC,PENDING), FC > FCnt)),
         flora_get_counter(TKCNT,Tk),

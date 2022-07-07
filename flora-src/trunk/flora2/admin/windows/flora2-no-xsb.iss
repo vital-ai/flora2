@@ -5,8 +5,8 @@
 ; by the MyBaseDir variable below.
 
 #define MyAppName "Flora-2"
-#define FlrVersion "2.0"
-#define MyAppVerName "Flora-2  v. "+FlrVersion+" (Pyrus nivalis)"
+#define FlrVersion "2.1"
+#define MyAppVerName "Flora-2  v. "+FlrVersion+" (Punica granatum)"
 #define MyAppPublisher "Flora-2"
 #define MyAppURL "http://flora.sourceforge.net/"
 #define MyAppUrlName "Flora-2 Web Site.url"
@@ -33,9 +33,11 @@ OutputBaseFilename=flora2-{#FlrVersion}
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=none
+TouchTime=none
+InstallYear=2022
 
 VersionInfoVersion={#FlrVersion}
-VersionInfoCopyright=© The Research Foundation of SUNY, 1999 - 2018
+VersionInfoCopyright=ï¿½ The Research Foundation of SUNY, 1999 - {#InstallYear}; Coherent Knowledge Systems, 2013 - {#InstallYear}
 
 AllowRootDirectory=yes
 UninstallFilesDir="{userdocs}\Flora-2 uninstaller"
@@ -59,7 +61,7 @@ Name: shortcut; Description: "&Create a desktop shortcut to run Flora-2"; Compon
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Messages]
-BeveledLabel=Flora-2 {#FlrVersion} © The Research Foundation of SUNY, 1999 - 2018
+BeveledLabel=Flora-2 {#FlrVersion} ï¿½ The Research Foundation of SUNY, 1999 - {#InstallYear}; Coherent Knowledge Systems, 2013 - {#InstallYear}
 
 [Dirs]
 Name: "{app}" ; Permissions: users-modify users-full

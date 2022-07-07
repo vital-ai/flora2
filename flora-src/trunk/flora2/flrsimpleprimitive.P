@@ -71,6 +71,9 @@ flora_simple_primitive(once,1,flora_table_once,flrtables).
 
 flora_simple_primitive(FL_NEWOIDOP,1,FLLIBNEWOID,flrnewoid).
 flora_simple_primitive(FL_SKOLEMOP,1,FLLIBNEWOID,flrnewoid).
+flora_simple_primitive(FL_NEWOIDOP,2,FLLIBNEWOID,flrnewoid).
+flora_simple_primitive(FL_SKOLEMOP,2,FLLIBNEWOID,flrnewoid).
+flora_simple_primitive(FL_SKOLEMIZE,2,flora_skolemize_term,flrnewoid).
 flora_simple_primitive(cloneterm,2,copy_term,basics).
 flora_simple_primitive(encoding,2,flora_encoding,flrencoding).
 flora_simple_primitive(isnegform,1,flora_is_neg_negated_pred,flrwrapper).

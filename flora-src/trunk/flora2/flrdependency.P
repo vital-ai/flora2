@@ -897,6 +897,7 @@ set_indexes_list([H|L]) :-
         ),
         (var(Term) -> set_indexes(H)
         ; Term = FL_CONTEXT(_,_,_) -> true
+        ; Term = FL_DATATYPE(_,_) -> true
         ; set_indexes(H)
         ),
 	set_indexes_list(L).

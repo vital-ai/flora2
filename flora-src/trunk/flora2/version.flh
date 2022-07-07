@@ -30,12 +30,12 @@
 #if exists("ergoisms/version.flh")  && exists("ergoisms/ergo.switch")
 #include "ergoisms/version.flh"
 #else
-#define FLORA_VERSION   '2.1-RC1'
-#define FLORA_NAME      'Punica granatum'
+#define FLORA_VERSION   '2.2 beta'
+#define FLORA_NAME      'Dimocarpus longan'
 
 %% DO NOT TOUCH THIS!!!
-#define FLORA_BUILD     'Revision: 1312'
+#define FLORA_BUILD     'Revision: 7'
 
 %% DO NOT TOUCH THIS!!!
-#define FLORA_DATE      'Date: 2020-12-31 21:57:33'
+#define FLORA_DATE      'Date: 2022-07-03 14:25:46'
 #endif

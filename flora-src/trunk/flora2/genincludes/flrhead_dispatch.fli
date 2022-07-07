@@ -44,7 +44,7 @@
 /*******************************************************************
  FLORA_IGNORE_UNDEFCHECK
 *******************************************************************/
-?- abolish(FLORA_IGNORE_UNDEFCHECK/1).
+?- catch(abolish(FLORA_IGNORE_UNDEFCHECK/1),_,true).
 :- dynamic FLORA_IGNORE_UNDEFCHECK/1.
 
 #include "flrhead_dispatch_neg.inc"

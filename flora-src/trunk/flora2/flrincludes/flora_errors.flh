@@ -32,7 +32,7 @@
   errors reported by the Flora-2 Lexer
 **********************************************************/
 #define UNEXP_UNPRINT	 'unexpected unprintable character'
-#define UNEXP_DEL_ISO	 'unexpected non-ASCII character:\n\t\tbeware of Unicode looke-alikes of '', ", and comma'
+#define UNEXP_DEL_ISO	 'unexpected non-ASCII character:\n\t\tbeware of Unicode look-alikes of space, '', ", and comma'
 #define UNEXP_EOF	 'unexpected end of file'
 #define UNEXP_PRINT	 'unexpected printable character'
 #define HEX_EXPECTED     'hexadecimal digit is expected in string'
@@ -435,7 +435,7 @@
   Misc warnings 
 ******************************************************/
 
-#define WARN_TABLED_FLLOAD  'a tabled subgoal depends on ~w.~n\t\t  The program might not function correctly.~n\t\t  Indicator:         ~w~n\t\t  Offending module:  ~w~n'
+#define WARN_TABLED_FLLOAD  'a tabled subgoal depends on ~w.~n\t\t  The program might not function correctly.~n\t\t  Indicator: ~w~n\t\t  Offending module:  ~w~n\t\t  Offending predicate: ~w~n'
 
 /******************************************************
  User defined function errors 

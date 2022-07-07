@@ -275,6 +275,7 @@
 /* Dynamic newoid operation; newoid is deprecated */
 #define FL_NEWOIDOP		newoid
 #define FL_SKOLEMOP		skolem
+#define FL_SKOLEMIZE            skolemize
 #define FL_NEWOID_DYNSYM	dyn_skolem
 
 #define FL_SKOLEM		'\\skolem'

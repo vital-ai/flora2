@@ -1062,6 +1062,8 @@ is_logicalquantifier('all',FL_FORALL)       :- !.
 is_logicalquantifier('\\all',FL_FORALL)       :- !.
 is_logicalquantifier('each',FL_FORALL)       :- !.
 is_logicalquantifier('\\each',FL_FORALL)       :- !.
+is_logicalquantifier('every',FL_FORALL)       :- !.
+is_logicalquantifier('\\every',FL_FORALL)       :- !.
 is_existentialquant(FL_EXISTS)    :- !.
 is_existentialquant(FL_EXIST)     :- !.
 is_universalquant(FL_FORALL)    :- !.
@@ -5572,7 +5574,10 @@ parse_body_literal(CanoniTerm,DWS,Code,Status) :-
             %% argument declaration FL_BODYFORMULA
             (has_context(CONTEXT_PARSER_IMPLICIT_REIFICATION) ->
                 Code = C, Status = NO_ERRORS
-            ; parsing_error(CanoniTerm,NO_REIFY_VAR,Status)
+            ;   %% seems more useful to not issue this error and to allow
+                %% things like ${?v} and ${\neg ?v} than to issue error
+                %%parsing_error(CanoniTerm,NO_REIFY_VAR,Status)
+                Code = C, Status = NO_ERRORS
             )
         /*
         %% This happens when we have a predicate with a variable in an argument

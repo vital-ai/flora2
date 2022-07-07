@@ -399,7 +399,22 @@ flora_apply_negation_wrapper(Goal,Workspace,GoalWrapped) :-
 	flora_module_predicate(FL_TABLED_NAF_CALL,[Goal],Workspace,GoalWrapped).
 
 
+%% debugging: this lets one handle exceptions in Goal by just failing them
+%% to disable the below abort, jusy execute
+%%               assert(aaaa(1)@\plg(flrnegation))@\plg,
+/*
+:- dynamic incr_table_error_action/1.
+incr_table_error_action(fail).
+incr_tabling_error_handler(_Line,_File,_Goal,_Ball) :-
+        incr_table_error_action(Action),
+        !,
+        DBGOUTLN('typed_table_error(incremental_tabling),context(context( An incremental update is trying to invalidate the goal... - and the call is failed'),
+        %%retractall(incr_table_error_action(_)),
+        call(Action).
+*/
+
 incr_tabling_error_handler(Line,File,Goal,_Ball) :-
+        DBGOUTLN(sideeffectful=_Ball),
 	((Line == NULL ; var(Line)) -> LineMsg = FL_UNKNOWN_OBJECT
 	; LineMsg = Line
 	),
@@ -410,12 +425,16 @@ incr_tabling_error_handler(Line,File,Goal,_Ball) :-
 	((var(Line) ; var(File)) -> EndingMsg = ' (The offending statement may have been created dynamically and passed down as an argument.)'
 	; EndingMsg = ''
 	),
-	MainMsg1 = '\n\t\tattempt to perform a side-effectful action\n\t\t    ',
+	MainMsg1 = 'attempt to perform a side-effectful action\n\t\t    ',
 	MainMsg2 = '\n\t\tin an \\if or \\unless-condition, or under \\naf or forall.\n\t\tTry to reformulate using the hypotheticals <> or ~<>.',
 	flora_decode_goal_as_atom_substitute_vars(Goal,GoalAtm),
-	flora_abort(['line ', LineMsg, ', file ', FileMsg, ': ',
+        ((FileMsg == '<unknown>' ; var(FileMsg)) ->
+            flora_abort([MainMsg1, GoalAtm, MainMsg2, EndingMsg],
+                        FLORA_ABORT_NOTRACE)
+	; flora_abort(['line ', LineMsg, ', file ', FileMsg, ': \n\t\t',
 		     MainMsg1, GoalAtm, MainMsg2, EndingMsg],
-		    FLORA_ABORT_NOTRACE).
+		    FLORA_ABORT_NOTRACE)
+        ).
 
 %% Optimizations for common cases. More to be added as needed
 %%
@@ -497,13 +516,26 @@ make_negated_goal(FLLIBDELAYEDLITERAL(Builtin,File,Line,Args),_OrigGoal, \+(Goal
 	!,
 	Goal = FLLIBDELAYEDLITERAL(Builtin,File,Line,Args).
 
-make_negated_goal(FLLIBHYPOTHETICAL(Type,Goal), _OrigGoal, FLLIBHYPOTHETICAL(ReverseType,Goal)) :-
+make_negated_goal(FLLIBHYPOTHETICAL(Type,Goal), _OrigGoal, FLLIBHYPOTHETICAL(NegType,Goal)) :-
 	!,
 #ifdef NEGATION_DEBUG_STATS
 	flrporting:flora_increment_counter(neghypo,1,_,_),
 #endif
-	(Type == FL_POSSIBLE -> ReverseType = FL_IMPOSSIBLE
-	; ReverseType = FL_POSSIBLE
+	(Type == FL_POSSIBLE -> NegType = FL_IMPOSSIBLE
+	; NegType = FL_POSSIBLE
+	).
+
+make_negated_goal(FLLIBMODLIT(LIBMOD_WRAPPER,
+                              FLLIBHYPOTHETICAL(Type,Goal),Module,Context),
+                  _OrigGoal,
+                  FLLIBMODLIT(LIBMOD_WRAPPER,
+                              FLLIBHYPOTHETICAL(NegType,Goal),Module,Context)) :-
+        	!,
+#ifdef NEGATION_DEBUG_STATS
+	flrporting:flora_increment_counter(neghypo,1,_,_),
+#endif
+	(Type == FL_POSSIBLE -> NegType = FL_IMPOSSIBLE
+	; NegType = FL_POSSIBLE
 	).
 
 
@@ -520,7 +552,7 @@ make_negated_goal(_UnwrappedGoal,OrigGoal,my_not_exists(OrigGoal)) :-
 #ifdef NEGATION_DEBUG_STATS
 	flrporting:flora_increment_counter(neggenerl,1,_,_),
 #endif
-	%% cleanup_negation/1 is checking for incomplete tables to be safe
+	%% cleanup_negation/1 checks if incomplete tables are safe
 	cleanup_negation(OrigGoal),
 	%% register_negated_call MUST come after cleanup_negation
 	register_negated_call(OrigGoal),

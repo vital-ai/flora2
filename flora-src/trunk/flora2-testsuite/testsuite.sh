@@ -263,6 +263,7 @@ fi
 $GREP "fault" $LOG_FILE | $GREP -v "segfault_handler" | $GREP -v "default" | $GREP -v "pagefault"  >> $RES_FILE
 # core dumped
 $GREP "dumped" $LOG_FILE >> $RES_FILE
+$GREP "Error\[" $LOG_FILE >> $RES_FILE
 # when no output file is generated
 $GREP "no match" $LOG_FILE >> $RES_FILE
 # for bus error
@@ -278,7 +279,7 @@ $GREP "abort" $LOG_FILE | $GREP -v "on_abort" >> $RES_FILE
 $GREP "overflow" $LOG_FILE >> $RES_FILE
 # for ... missing command...
 $GREP "not found" $LOG_FILE >> $RES_FILE
-$GREP "abnorm" $LOG_FILE >> $RES_FILE
+#$GREP "abnorm" $LOG_FILE >> $RES_FILE
 $GREP "denied" $LOG_FILE >> $RES_FILE
 $GREP "no such file" $LOG_FILE >> $RES_FILE
 $GREP "illegal" $LOG_FILE | $GREP -v "read_canonical" >> $RES_FILE 

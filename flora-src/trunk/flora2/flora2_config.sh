@@ -6,6 +6,8 @@ echo "+++++ Installing Flora-2 -- will take a few minutes"
 echo ""
 
 currdir=`pwd`
+echo "----- Current directory = $currdir"
+echo ""
 
 if [ -d ./flora2 -a -d ./XSB ]; then
     flrdir="$currdir/flora2"
@@ -24,7 +26,12 @@ mv -f "$xsbdir" $tmpxsbdir
 cd $tmpxsbdir/build
 
 echo "+++++ Configuring XSB"
-./configure --with-dbdrivers > "$currdir/flora2-install.log" 2>&1 || \
+echo ""
+echo "+++++ Configuring XSB" > "$currdir/ergo-install.log"
+echo "----- Current directory = $currdir" >> "$currdir/ergo-install.log"
+echo "" >> "$currdir/ergo-install.log"
+
+./configure --with-dbdrivers >> "$currdir/flora2-install.log" 2>&1 || \
     (echo "***** Configuration of XSB failed: see $currdir/flora2-install.log"; exit 1)
 echo "+++++ Compiling XSB"
 ./makexsb >> "$currdir/flora2-install.log" 2>&1 || \

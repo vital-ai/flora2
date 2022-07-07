@@ -36,7 +36,7 @@
 :- WRAP_COPY_UNQUOTED 'FLORA_THIS_FDB_STORAGE'.
 :- WRAP_COPY_UNQUOTED 'ERGO_THIS_STRUCTDB_STORAGE'.
 :- WRAP_COPY_UNQUOTED 'WARN_TABLED_FLLOAD'.
-:- WRAP_COPY_UNQUOTED '_Exception'.
+:- WRAP_COPY_UNQUOTED 'Exception'.
 :- WRAP_COPY_UNQUOTED '_Trace'.
 
 :- dynamic flora_defined_class/1.
@@ -165,8 +165,13 @@
 ?- (flrlibman:flora_system_module('FLORA_THIS_MODULE_NAME') -> true
    ; 
      catch(abolish_all_tables,
-           '_Exception',
+           'Exception',
            (
+             %%writeln('Exception'),
+             ('Exception' = error(permission_error(_op,Msg,_),context(Pred,_trace))
+             -> true
+             ; Pred=unknown
+             ),
              (flora_match_substring('patch.P','FLORA_THIS_FILENAME',_) ->
                Offender = '<internal patch file>'
              ; Offender = 'FLORA_THIS_FILENAME'
@@ -174,7 +179,8 @@
              flora_warning_line('WARN_TABLED_FLLOAD',
                                 ['load{...} or newmodule{...},\n\t\t  which must be standalone queries',
                                  Offender,
-                                 'FLORA_THIS_MODULE_NAME'])
+                                 'FLORA_THIS_MODULE_NAME',
+                                 Pred])
            )
           )
    ).

@@ -956,7 +956,12 @@ complex_type_numeric_value(FL_DURATION,
 			   (DSign,Yr,Mo,Day,Hr,Min,Sec),
 			   (DNumVal,MinValue,SecValue)) :-
 	complex_type_numeric_value(FL_DATE,(DSign,Yr,Mo,Day,1,0,0),(DNumVal,_)),
-	complex_type_numeric_value(FL_TIME,(Hr,Min,Sec,1,0,0),(MinValue,SecValue)).
+	complex_type_numeric_value(FL_TIME,(Hr,Min,Sec,1,0,0),(MinValue1,SecValueAtm)),
+        MinValue is DSign*MinValue1,
+        atom_codes(SecValueAtm,SecCodes), number_codes(SecValue1,SecCodes),
+        SecValue2 is DSign*SecValue1,
+        number_codes(SecValue2,SecCodes2),
+        atom_codes(SecValue,SecCodes2).
 
 complex_type_numeric_value(FL_CURRENCY,(Value,_Unit),Value) :- !.
 
